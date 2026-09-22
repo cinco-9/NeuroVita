@@ -1,0 +1,35 @@
+# Core ML Libraries
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.9.0
+
+# Machine Learning Models
+xgboost==3.4.1
+lightgbm==4.6.0
+catboost==1.2.10
+
+# Imbalanced Data
+imbalanced-learn==0.13.0
+
+# Optimization
+optuna==5.0.0
+
+# Explainability
+shap==0.52.0
+
+# Web Framework
+streamlit==1.42.0
+
+# Database & Auth
+supabase==3.0.0
+python-dotenv==1.0.1
+
+# PDF Generation
+reportlab==5.0.1
+
+# Visualization
+matplotlib==3.11.1
+seaborn==0.13.2
+
+# Utilities
+tqdm==4.70.0

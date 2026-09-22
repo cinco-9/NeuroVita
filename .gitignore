@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Modelos treinados (grandes)
+# Exceto os modelos necessários para o deploy
+*.pkl
+!modelo_melhorado_clinico.pkl
+!scaler_melhorado.pkl
+*.joblib
+*.h5
+*.model
+
+# Imagens temporárias geradas (manter apenas resultados finais)
+gauge_*.png
+!gauge_component.py
+shap_*.png
+!shap_explicabilidade.py
+evolucao_*.png
+progresso_*.png
+teste_*.png
+relatorio_*.pdf
+
+# Arquivos de backup
+*.bak
+
+# Dados sensíveis
+.env
+credentials.json
+
+# Logs
+*.log
+
+# Temporários
+temp/
+tmp/
+*.tmp

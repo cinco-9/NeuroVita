@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -m streamlit run \"C:\\\\dev\\\\tcc-diabetes\\\\app_diabetes.py\" --server.headless=true)"
+    ]
+  }
+}
