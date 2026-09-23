@@ -11,7 +11,7 @@ Sistema completo de predição de diabetes tipo 2 utilizando Machine Learning, c
 
 ## 🌐 Demo Online
 
-**Acesse o sistema funcionando:** [EM BREVE - Seguir DEPLOY.md]
+**Acesse o sistema funcionando:** [https://neurovita-9jmmlcrm2ewvcxrvunmyhj.streamlit.app](https://neurovita-9jmmlcrm2ewvcxrvunmyhj.streamlit.app)
 
 > 📱 **Responsivo:** Funciona em desktop, tablet e mobile!
 
