@@ -1,24 +1,24 @@
-# Core ML Libraries (essenciais para rodar o app)
-numpy==1.26.4
-pandas==2.2.3
-scikit-learn==1.5.2
+# Core ML (versões leves para 1GB RAM)
+numpy<2.0
+pandas<3.0
+scikit-learn<2.0
 
-# Machine Learning Model (apenas o usado no app)
-xgboost==2.1.3
+# ML Model (essencial)
+xgboost<3.0
 
-# Explainability
-shap==0.46.0
+# Explainability (REMOVIDO - muito pesado)
+# shap - desabilitado temporariamente
 
 # Web Framework
-streamlit==1.42.0
+streamlit<2.0
 
-# Database & Auth
-supabase==2.31.0
-python-dotenv==1.0.1
+# Database
+supabase<3.0
+python-dotenv
 
-# PDF Generation
-reportlab==4.2.5
+# PDF (leve)
+reportlab<5.0
 
-# Visualization
-matplotlib==3.9.3
-seaborn==0.13.2
+# Visualização (mínimo)
+matplotlib<4.0
+# seaborn - removido (usa matplotlib por baixo)

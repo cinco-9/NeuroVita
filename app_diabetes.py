@@ -11,10 +11,10 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import VotingClassifier
 import xgboost as xgb
-import lightgbm as lgb
-from catboost import CatBoostClassifier
+# import lightgbm as lgb  # Desabilitado para economizar RAM
+# from catboost import CatBoostClassifier  # Desabilitado para economizar RAM
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns  # Desabilitado - usa matplotlib
 import warnings
 import uuid
 from datetime import datetime
@@ -24,7 +24,7 @@ warnings.filterwarnings('ignore')
 from supabase_db import db as supabase_db
 from auth import auth
 from pdf_generator import gerar_relatorio_predicao
-from shap_explicabilidade import criar_grafico_barras_shap, obter_top_features_shap
+# from shap_explicabilidade import criar_grafico_barras_shap, obter_top_features_shap  # Desabilitado - muito pesado
 from gauge_component import criar_gauge_risco
 from analise_temporal import criar_grafico_evolucao, criar_grafico_progresso, calcular_estatisticas_evolucao
 import pickle
@@ -750,12 +750,13 @@ elif pagina == "Modelo Clínico":
 
             df_shap = pd.DataFrame(dados_shap)
 
-            # Gerar gráfico SHAP
-            shap_path = criar_grafico_barras_shap(df_shap, carregar_modelo_pima())
+            # Gráfico SHAP DESABILITADO (economizar RAM no Streamlit Cloud Free)
+            # shap_path = criar_grafico_barras_shap(df_shap, carregar_modelo_pima())
+            # if os.path.exists(shap_path):
+            #     st.image(shap_path, use_column_width=True)
+            #     st.info("O gráfico SHAP mostra quais fatores mais influenciaram sua predição.")
 
-            if os.path.exists(shap_path):
-                st.image(shap_path, use_column_width=True)
-                st.info("O gráfico SHAP mostra quais fatores mais influenciaram sua predição.")
+            st.info("📊 Gráficos SHAP temporariamente desabilitados para otimização de recursos.")
 
         except Exception as e:
             st.info(f"Explicação SHAP indisponível nesta versão: {e}")
