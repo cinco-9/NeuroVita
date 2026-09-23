@@ -1,0 +1,236 @@
+LISTA COMPLETA DE COLUNAS - VIGITEL 2023
+================================================================================
+
+  1. chave
+  2. tipo_fone
+  3. replica
+  4. cidade
+  5. ano
+  6. q6
+  7. q7
+  8. q8a
+  9. q8b
+ 10. q9
+ 11. q11
+ 12. q12
+ 13. q13
+ 14. q14
+ 15. r190
+ 16. r128a
+ 17. q15
+ 18. q16
+ 19. q17
+ 20. q18
+ 21. q19
+ 22. q20
+ 23. q25
+ 24. q26
+ 25. q27
+ 26. q28
+ 27. q29
+ 28. q30
+ 29. q31
+ 30. r301_a
+ 31. r301_b
+ 32. r301_c
+ 33. r301_d
+ 34. r301_e
+ 35. r301_f
+ 36. r301_g
+ 37. r301_h
+ 38. r301_i
+ 39. r301_j
+ 40. r301_k
+ 41. r301_l
+ 42. r302_a
+ 43. r302_b
+ 44. r302_c
+ 45. r302_d
+ 46. r302_e
+ 47. r302_f
+ 48. r302_g
+ 49. r302_h
+ 50. r302_i
+ 51. r302_j
+ 52. r302_k
+ 53. r302_l
+ 54. r302_m
+ 55. q35
+ 56. q36
+ 57. q37
+ 58. q38
+ 59. q40
+ 60. q40b
+ 61. q42
+ 62. q43a
+ 63. q43a_ou
+ 64. q44
+ 65. q45
+ 66. q46
+ 67. q47
+ 68. q48
+ 69. q49
+ 70. r147
+ 71. r148_hh
+ 72. r148_mm
+ 73. q50
+ 74. q51
+ 75. q52
+ 76. q53
+ 77. q54
+ 78. q55
+ 79. q56
+ 80. r149
+ 81. r150_hh
+ 82. r150_mm
+ 83. q59a
+ 84. q59b
+ 85. q59c
+ 86. q60
+ 87. q61
+ 88. q61_fx
+ 89. q64
+ 90. q67
+ 91. q68
+ 92. r157
+ 93. r401
+ 94. r401a_1
+ 95. r401b_1
+ 96. r401b_2
+ 97. r401c_1
+ 98. r401c_2
+ 99. r401c_3
+100. r402
+101. r404
+102. r404_ou
+103. r403
+104. q74
+105. q75
+106. r203
+107. r129
+108. q76
+109. r204
+110. r133a
+111. r133b
+112. r205
+113. r206
+114. r207
+115. q79a
+116. q80
+117. q81
+118. q82
+119. r501
+120. r502
+121. r503
+122. r504
+123. r505_1
+124. r505_2
+125. r505_3
+126. r505_4
+127. r505_5
+128. r505_90
+129. r505_ou
+130. r506
+131. r506_ou
+132. q88
+133. q69
+134. q69_ou
+135. civil
+136. q70
+137. q71
+138. r135
+139. r178
+140. moradores
+141. adultos
+142. fet
+143. q8_anos
+144. fesc
+145. pinterno
+146. pesorake
+147. pesorake_fixo
+148. pesorake_celular
+149. q9_i
+150. q11_i
+151. fumante
+152. exfuma
+153. mais20
+154. eletronico
+155. fumocasa
+156. fumotrab
+157. imc
+158. imc_i
+159. excpeso
+160. excpeso_i
+161. obesid
+162. obesid_i
+163. hortareg
+164. frutareg
+165. flvreg
+166. cruadia
+167. cozidadia
+168. hortadia
+169. sucodia
+170. sofrutadia
+171. frutadia
+172. flvdia
+173. flvreco
+174. refritl5
+175. feijao5
+176. score_sf
+177. score_sf_2cat
+178. score_upp
+179. score_upp_2cat
+180. af
+181. freq
+182. time
+183. ati_livre
+184. ativo_livre
+185. atitrans
+186. atidom
+187. atiocu
+188. inativo
+189. q51medio
+190. q54medio
+191. deslocdia
+192. deslocsemana
+193. atiocusemana
+194. faxinasemana
+195. af3dominios
+196. af3dominios_insu
+197. tv_d_3
+198. tempo_tela_stv
+199. q59a_horas
+200. q59c_horas
+201. tempo_tela_total
+202. time_2023
+203. ati_livre_2023
+204. inativo_2023
+205. q51medio_2023
+206. q54medio_2023
+207. deslocdia_2023
+208. deslocsemana_2023
+209. af3dominios_2023
+210. af3dominios_insu_2023
+211. alcabu
+212. direcao
+213. direcao_alc
+214. saruim
+215. iddmamo
+216. mamo
+217. mamodois
+218. iddpapa_old
+219. iddpapa
+220. papa
+221. papatres
+222. hart
+223. diab
+224. depressao
+225. ind_med_has
+226. med_has
+227. trat_med_has
+228. ind_med_db
+229. med_db
+230. insulina
+231. trat_med_db
+232. ind_med_depr
+233. trat_med_depr
