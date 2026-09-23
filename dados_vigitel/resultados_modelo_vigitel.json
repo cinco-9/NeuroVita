@@ -1,0 +1,58 @@
+{
+  "dataset": "VIGITEL 2023",
+  "registros_treino": 14005,
+  "registros_teste": 6003,
+  "threshold": 0.25,
+  "metricas": {
+    "accuracy": 0.7268032650341496,
+    "precision": 0.2688284518828452,
+    "recall": 0.6798941798941799,
+    "f1_score": 0.3853073463268366,
+    "roc_auc": 0.7761469643021006
+  },
+  "cross_validation": {
+    "mean": 0.14758087735099593,
+    "std": 0.025862837936093425,
+    "min": 0.1187214611872146,
+    "max": 0.20535714285714285
+  },
+  "feature_importance": [
+    {
+      "Feature": "HighBP",
+      "Importance": 0.3043646514415741
+    },
+    {
+      "Feature": "HighChol",
+      "Importance": 0.25854000449180603
+    },
+    {
+      "Feature": "Age",
+      "Importance": 0.1796792894601822
+    },
+    {
+      "Feature": "GenHlth",
+      "Importance": 0.10372239351272583
+    },
+    {
+      "Feature": "Fruits",
+      "Importance": 0.05572102591395378
+    },
+    {
+      "Feature": "BMI",
+      "Importance": 0.036136358976364136
+    },
+    {
+      "Feature": "Smoker",
+      "Importance": 0.032916028052568436
+    },
+    {
+      "Feature": "PhysActivity",
+      "Importance": 0.02892022393643856
+    }
+  ],
+  "comparacao_usa": {
+    "f1_brasil": 0.3853073463268366,
+    "f1_usa": 0.47,
+    "melhoria_percentual": -18.019713547481565
+  }
+}
