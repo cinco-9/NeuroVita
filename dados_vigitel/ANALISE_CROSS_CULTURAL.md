@@ -6,9 +6,13 @@
 
 | | Brasil | EUA |
 |---|---|---|
-| Pesquisa | VIGITEL 2023 (telefone) | BRFSS 2015 (telefone) |
-| Registros válidos | 19,919 | 253,680 |
-| Diabetes (diagnóstico autorreferido) | 12.6% na amostra, **10.1% ponderada** | 13.9% |
+| Pesquisa | VIGITEL 2023 (telefone) | BRFSS 2015 (telefone, dados originais do CDC) |
+| Registros válidos | 19,919 | 360,689 |
+| Diabetes diagnosticado | 12.6% na amostra, **10.1% ponderada** | 13.0% na amostra, **10.6% ponderada** |
+
+Nos dois países o desfecho é **diabetes diagnosticado por médico** (autorreferido). No BRFSS foram usados os
+dados originais do CDC, e não a versão do Kaggle do modelo comportamental, porque esta agrupa pré-diabetes com
+diabetes; aqui, pré-diabetes e diabetes apenas na gravidez contam como "não".
 
 As variáveis do VIGITEL foram conferidas no dicionário oficial. Para comparar os países, os modelos usam
 apenas as variáveis com **definição equivalente** nas duas pesquisas:
@@ -31,13 +35,13 @@ apenas as variáveis com **definição equivalente** nas duas pesquisas:
 
 | Indicador | Brasil | EUA |
 |---|---|---|
-| IMC médio | 27.0 | 28.4 |
-| Obesidade (IMC ≥ 30) | 23.9% | 34.6% |
-| Pressão alta | 33.3% (ponderada: 27.3%) | 42.9% |
-| Saúde ruim/muito ruim | 6.0% | 17.2% |
-| Fumante* | 8.2% | 44.3% |
-| Atividade física* | 41.5% | 75.7% |
-| Frutas* | 60.8% | 63.4% |
+| IMC médio | 27.0 | 27.9 |
+| Obesidade (IMC ≥ 30) | 23.9% | 29.6% |
+| Pressão alta | 33.3% (ponderada: 27.3%) | 40.7% (ponderada: 32.6%) |
+| Saúde ruim/muito ruim | 6.0% | 18.3% |
+| Fumante* | 8.2% | 44.0% |
+| Atividade física* | 41.5% | 74.1% |
+| Frutas* | 60.8% | 62.2% |
 
 \* Definições diferentes entre as pesquisas (ver seção 1): **não comparar diretamente**.
 
@@ -45,15 +49,16 @@ apenas as variáveis com **definição equivalente** nas duas pesquisas:
 
 | Faixa | Diabetes Brasil | Diabetes EUA | % da amostra Brasil | % da amostra EUA |
 |---|---|---|---|---|
-| 18-34 | 1.8% | 2.2% | 23.5% | 9.6% |
-| 35-44 | 4.8% | 5.6% | 19.3% | 11.8% |
-| 45-54 | 10.3% | 10.5% | 18.2% | 18.2% |
-| 55-64 | 19.8% | 15.6% | 16.9% | 25.3% |
-| 65+ | 27.1% | 20.6% | 22.1% | 35.1% |
+| 18-34 | 1.8% | 1.5% | 23.5% | 14.6% |
+| 35-44 | 4.8% | 5.1% | 19.3% | 11.4% |
+| 45-54 | 10.3% | 10.0% | 18.2% | 16.3% |
+| 55-64 | 19.8% | 15.4% | 16.9% | 22.5% |
+| 65+ | 27.1% | 20.2% | 22.1% | 35.2% |
 
-A diferença de prevalência bruta é estatisticamente significativa (qui-quadrado, p = 1.2e-07), mas as
-amostras têm composição etária diferente. Padronizando o Brasil pela distribuição etária dos EUA, a
-prevalência brasileira fica em **17.1%** (EUA: 13.9%).
+A diferença de prevalência bruta não é estatisticamente significativa (qui-quadrado,
+p = 0.1). As amostras, porém, têm composição etária diferente: a dos EUA é mais velha. Padronizando o
+Brasil pela distribuição etária dos EUA, a prevalência brasileira fica em **16.5%**
+(EUA: 13.0%): a partir dos 55 anos, a prevalência é maior no Brasil.
 
 ![Prevalência por faixa etária](fig_prevalencia_faixa_etaria.png)
 
@@ -65,9 +70,9 @@ conjunto de validação (maior F1) e métricas calculadas no conjunto de teste, 
 | Treinado em | Testado em | AUC | F1 | Precisão | Recall |
 |---|---|---|---|---|---|
 | Brasil | Brasil | 0.813 | 0.419 | 29.8% | 70.5% |
-| EUA | EUA | 0.814 | 0.449 | 35.2% | 61.8% |
-| EUA | Brasil | 0.814 | 0.372 | 39.3% | 35.3% |
-| Brasil | EUA | 0.773 | 0.378 | 24.7% | 80.9% |
+| EUA | EUA | 0.825 | 0.445 | 36.8% | 56.4% |
+| EUA | Brasil | 0.818 | 0.375 | 41.9% | 33.9% |
+| Brasil | EUA | 0.787 | 0.375 | 24.3% | 82.1% |
 
 A **AUC** não depende do limiar e é a melhor métrica para comparar a capacidade de ordenar o risco entre
 países. F1, precisão e recall dependem do limiar e da prevalência de cada população.
@@ -78,11 +83,11 @@ países. F1, precisão e recall dependem do limiar e da prevalência de cada pop
 
 | Variável | Brasil | EUA |
 |---|---|---|
-| Pressão alta | 41.9% | 58.9% |
-| Saúde autoavaliada | 17.8% | 25.7% |
-| Idade | 25.6% | 7.3% |
-| IMC | 9.0% | 6.1% |
-| Sexo (masc.) | 5.7% | 1.9% |
+| Pressão alta | 41.9% | 63.0% |
+| Saúde autoavaliada | 17.8% | 20.7% |
+| Idade | 25.6% | 8.7% |
+| IMC | 9.0% | 5.7% |
+| Sexo (masc.) | 5.7% | 1.8% |
 
 ![Importância das variáveis](fig_importancia_variaveis.png)
 
@@ -90,6 +95,6 @@ países. F1, precisão e recall dependem do limiar e da prevalência de cada pop
 
 - Pesquisas de anos diferentes (2015 x 2023) e diabetes **autorreferido**, que subestima casos não diagnosticados.
 - A escala de saúde autoavaliada tem âncoras diferentes nas duas pesquisas (ex.: "regular" x "good").
-- O conjunto BRFSS usado é a versão limpa do Kaggle, sem pesos amostrais; as comparações com o Brasil
-  usam a amostra sem ponderação, exceto onde indicado.
+- As prevalências ponderadas usam os pesos amostrais de cada pesquisa; os modelos e as demais comparações usam
+  as amostras sem ponderação.
 - Variáveis importantes nos EUA (colesterol) não puderam ser usadas por não existirem no VIGITEL.

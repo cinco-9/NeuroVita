@@ -52,24 +52,25 @@ apresentou os resultados da Tabela 2.
 
 ### 5.3.1 Perfil das populações
 
-A Tabela 3 compara as amostras do VIGITEL 2023 e do BRFSS 2015.
+A Tabela 3 compara as amostras do VIGITEL 2023 e dos dados originais do BRFSS 2015. Nos dois casos, o desfecho
+é o diagnóstico médico de diabetes.
 
 **Tabela 3 – Características das amostras**
 
 | Indicador | Brasil (VIGITEL 2023) | EUA (BRFSS 2015) |
 |---|---|---|
-| Registros | 19.919 | 253.680 |
-| Diabetes | 12,6% (10,1% ponderado) | 13,9% |
-| IMC médio (kg/m²) | 27,0 | 28,4 |
-| Obesidade (IMC ≥ 30) | 23,9% | 34,6% |
-| Pressão alta | 33,3% (27,3% ponderado) | 42,9% |
-| Saúde ruim ou muito ruim | 6,0% | 17,2% |
-| Pessoas com 65 anos ou mais | 22,1% | 35,1% |
-| Pessoas de 18 a 34 anos | 23,5% | 9,6% |
+| Registros | 19.919 | 360.689 |
+| Diabetes | 12,6% (10,1% ponderado) | 13,0% (10,6% ponderado) |
+| IMC médio (kg/m²) | 27,0 | 27,9 |
+| Obesidade (IMC ≥ 30) | 23,9% | 29,6% |
+| Pressão alta | 33,3% (27,3% ponderado) | 40,7% (32,6% ponderado) |
+| Saúde ruim ou muito ruim | 6,0% | 18,3% |
+| Pessoas com 65 anos ou mais | 22,1% | 35,2% |
+| Pessoas de 18 a 34 anos | 23,5% | 14,6% |
 
-A diferença de prevalência de diabetes entre as amostras foi estatisticamente significativa (qui-quadrado,
-p = 1,2 × 10⁻⁷). As amostras, porém, têm composição etária diferente: a do BRFSS é mais velha. A Figura X
-mostra a prevalência por faixa etária.
+As prevalências de diabetes foram próximas, e a diferença entre as amostras não foi estatisticamente
+significativa (qui-quadrado, p = 0,10). As amostras, porém, têm composição etária diferente: a do BRFSS é mais
+velha. A Figura X e a Tabela 4 mostram a prevalência por faixa etária.
 
 **Figura X – Prevalência de diabetes por faixa etária** (`dados_vigitel/fig_prevalencia_faixa_etaria.png`)
 
@@ -77,15 +78,15 @@ mostra a prevalência por faixa etária.
 
 | Faixa etária | Brasil | EUA |
 |---|---|---|
-| 18–34 | 1,8% | 2,2% |
-| 35–44 | 4,8% | 5,6% |
-| 45–54 | 10,3% | 10,5% |
-| 55–64 | 19,8% | 15,6% |
-| 65 ou mais | 27,1% | 20,6% |
+| 18–34 | 1,8% | 1,5% |
+| 35–44 | 4,8% | 5,1% |
+| 45–54 | 10,3% | 10,0% |
+| 55–64 | 19,8% | 15,4% |
+| 65 ou mais | 27,1% | 20,2% |
 
 Até os 54 anos, as prevalências são semelhantes; a partir dos 55 anos, a prevalência brasileira é maior.
-Padronizando a amostra brasileira pela distribuição etária do BRFSS, a prevalência brasileira passa a 17,1%,
-contra 13,9% nos EUA.
+Padronizando a amostra brasileira pela distribuição etária do BRFSS, a prevalência brasileira passa a 16,5%,
+contra 13,0% nos EUA.
 
 ### 5.3.2 Desempenho e transferência dos modelos
 
@@ -96,15 +97,15 @@ A Tabela 5 apresenta o desempenho de cada modelo no conjunto de teste do própri
 | Treinado em | Testado em | AUC | F1 | Precisão | Recall |
 |---|---|---|---|---|---|
 | Brasil | Brasil | 0,813 | 0,419 | 29,8% | 70,5% |
-| EUA | EUA | 0,814 | 0,449 | 35,2% | 61,8% |
-| EUA | Brasil | 0,814 | 0,372 | 39,3% | 35,3% |
-| Brasil | EUA | 0,773 | 0,378 | 24,7% | 80,9% |
+| EUA | EUA | 0,825 | 0,445 | 36,8% | 56,4% |
+| EUA | Brasil | 0,818 | 0,375 | 41,9% | 33,9% |
+| Brasil | EUA | 0,787 | 0,375 | 24,3% | 82,1% |
 
-O modelo treinado com dados dos EUA obteve no Brasil a mesma AUC (0,814) que o modelo treinado com dados
-brasileiros (0,813). No sentido inverso, o modelo brasileiro teve AUC de 0,773 nos EUA. Ao ser transferido, o
-modelo americano apresentou recall mais baixo no Brasil (35,3%), enquanto o brasileiro apresentou recall mais
-alto nos EUA (80,9%), variações que acompanham o limiar de decisão de cada modelo (0,22 nos EUA e 0,17 no
-Brasil).
+O modelo treinado com dados dos EUA obteve no Brasil AUC de 0,818, ligeiramente superior à do modelo treinado
+com dados brasileiros (0,813). No sentido inverso, o modelo brasileiro teve AUC de 0,787 nos EUA. Ao ser
+transferido, o modelo americano apresentou recall mais baixo no Brasil (33,9%), enquanto o brasileiro
+apresentou recall mais alto nos EUA (82,1%), variações que acompanham o limiar de decisão de cada modelo
+(0,24 nos EUA e 0,17 no Brasil).
 
 **Figura X – AUC no próprio país e no outro país** (`dados_vigitel/fig_auc_transferencia.png`)
 
@@ -114,11 +115,11 @@ Brasil).
 
 | Variável | Brasil | EUA |
 |---|---|---|
-| Pressão alta | 41,9% | 58,9% |
-| Saúde autoavaliada | 17,8% | 25,7% |
-| Idade | 25,6% | 7,3% |
-| IMC | 9,0% | 6,1% |
-| Sexo | 5,7% | 1,9% |
+| Pressão alta | 41,9% | 63,0% |
+| Saúde autoavaliada | 17,8% | 20,7% |
+| Idade | 25,6% | 8,7% |
+| IMC | 9,0% | 5,7% |
+| Sexo | 5,7% | 1,8% |
 
 Pressão alta foi a variável mais importante nos dois países. A idade teve peso maior no modelo brasileiro.
 

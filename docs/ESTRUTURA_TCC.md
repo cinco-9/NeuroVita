@@ -14,7 +14,7 @@ tabelas e siglas, sumário.
 validação Brasil x EUA, estudo NHANES) → principais números → conclusão principal.
 
 Números para o resumo: clínico F1 0,69 / AUC 0,84; comportamental AUC 0,82; modelo americano no Brasil
-AUC 0,81; NHANES AUC 0,83 contra 0,76 do escore ADA.
+AUC 0,82; NHANES AUC 0,83 contra 0,76 do escore ADA.
 
 ---
 
@@ -72,7 +72,8 @@ Tabela com as quatro bases:
 | Base | País/ano | N usado | Tipo | Uso no trabalho |
 |---|---|---|---|---|
 | Pima Indians | EUA | 768 | Exames clínicos | Modelo clínico |
-| BRFSS 2015 | EUA | 253.680 | Questionário telefônico | Modelo comportamental; validação Brasil x EUA |
+| BRFSS 2015 (Kaggle) | EUA | 253.680 | Questionário telefônico | Modelo comportamental |
+| BRFSS 2015 (CDC, original) | EUA | 360.689 | Questionário telefônico | Validação Brasil x EUA |
 | VIGITEL 2023 | Brasil | 19.919 | Questionário telefônico | Validação Brasil x EUA |
 | NHANES 2011-2018 | EUA | 17.306 | Exame físico e de sangue + questionário | Estudo de diabetes não diagnosticado |
 
@@ -136,8 +137,8 @@ F1 0,46; AUC 0,82; recall 61%; precisão 37%; todas as 16 configurações de XGB
 
 ### 5.3 Validação Brasil x EUA
 Figuras `dados_vigitel/fig_prevalencia_faixa_etaria.png`, `fig_auc_transferencia.png`,
-`fig_importancia_variaveis.png` e a tabela de transferência (AUC: Brasil→Brasil 0,813; EUA→EUA 0,814;
-EUA→Brasil 0,814; Brasil→EUA 0,773).
+`fig_importancia_variaveis.png` e a tabela de transferência (AUC: Brasil→Brasil 0,813; EUA→EUA 0,825;
+EUA→Brasil 0,818; Brasil→EUA 0,787).
 
 ### 5.4 Diabetes não diagnosticado (NHANES)
 Figuras `dados_nhanes/fig_curva_rastreamento.png` e `fig_razoes_chance.png`. Regressão Logística

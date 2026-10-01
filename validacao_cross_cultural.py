@@ -7,7 +7,7 @@ VALIDAÇÃO CROSS-CULTURAL: BRASIL (VIGITEL 2023) x EUA (BRFSS 2015)
 - Avalia cada modelo no próprio país e no outro (transferência).
 - Gera dados_vigitel/comparacao_cross_cultural.json, figuras PNG e ANALISE_CROSS_CULTURAL.md.
 
-Pré-requisito: python mapear_vigitel_completo.py
+Pré-requisitos: python mapear_vigitel_completo.py e python baixar_brfss.py
 Autor: David Reis | 2026
 """
 
@@ -53,9 +53,25 @@ FAIXAS = [('18-34', [1, 2, 3]), ('35-44', [4, 5]), ('45-54', [6, 7]), ('55-64', 
 br = pd.read_csv(f'{PASTA}/vigitel_2023_processado.csv')
 br['AgeCat'] = idade_para_faixa_brfss(br['Age'])
 
-us = pd.read_csv('diabetes_binary_health_indicators_BRFSS2015.csv').rename(columns={'Diabetes_binary': 'Diabetes'})
-us['AgeCat'] = us['Age'].astype(int)
-us['Diabetes'] = us['Diabetes'].astype(int)
+# Dados originais do CDC (python baixar_brfss.py). A versão do Kaggle agrupa pré-diabetes com diabetes;
+# aqui o desfecho é só diabetes diagnosticado, como no VIGITEL.
+bruto = pd.read_csv('dados_brfss/brfss2015_colunas.csv')
+bruto = bruto[bruto.DIABETE3.isin([1, 2, 3, 4]) & bruto._AGEG5YR.between(1, 13) & bruto._RFHYPE5.isin([1, 2])
+              & bruto.GENHLTH.between(1, 5) & bruto.SMOKE100.isin([1, 2]) & bruto._TOTINDA.isin([1, 2])
+              & bruto._FRTLT1.isin([1, 2]) & bruto._BMI5.notna()]
+us = pd.DataFrame({
+    'Diabetes': (bruto.DIABETE3 == 1).astype(int),  # 2 = só na gravidez, 3 = não, 4 = pré-diabetes -> 0
+    'AgeCat': bruto._AGEG5YR.astype(int),
+    'Sex': (bruto.SEX == 1).astype(int),
+    'BMI': bruto._BMI5 / 100,
+    'HighBP': (bruto._RFHYPE5 == 2).astype(int),
+    'GenHlth': bruto.GENHLTH.astype(int),
+    'Smoker': (bruto.SMOKE100 == 1).astype(int),
+    'PhysActivity': (bruto._TOTINDA == 1).astype(int),
+    'Fruits': (bruto._FRTLT1 == 1).astype(int),
+    'peso': bruto._LLCPWT,
+})
+us = us[us.BMI.between(10, 60)].reset_index(drop=True)
 
 paises = {'Brasil': br, 'EUA': us}
 for df in paises.values():
@@ -86,8 +102,9 @@ for nome, df in paises.items():
         },
     }
     desc[nome] = d
-desc['Brasil']['prevalencia_diabetes_ponderada'] = float(np.average(br['Diabetes'], weights=br['peso']))
-desc['Brasil']['pressao_alta_ponderada'] = float(np.average(br['HighBP'], weights=br['peso']))
+for nome, df in paises.items():
+    desc[nome]['prevalencia_diabetes_ponderada'] = float(np.average(df['Diabetes'], weights=df['peso']))
+    desc[nome]['pressao_alta_ponderada'] = float(np.average(df['HighBP'], weights=df['peso']))
 
 tabela = [[br['Diabetes'].sum(), len(br) - br['Diabetes'].sum()], [us['Diabetes'].sum(), len(us) - us['Diabetes'].sum()]]
 p_prev = float(chi2_contingency(tabela)[1])
@@ -250,9 +267,13 @@ relatorio = f"""# Validação Cross-Cultural: Brasil (VIGITEL 2023) x EUA (BRFSS
 
 | | Brasil | EUA |
 |---|---|---|
-| Pesquisa | VIGITEL 2023 (telefone) | BRFSS 2015 (telefone) |
+| Pesquisa | VIGITEL 2023 (telefone) | BRFSS 2015 (telefone, dados originais do CDC) |
 | Registros válidos | {B['n']:,} | {U['n']:,} |
-| Diabetes (diagnóstico autorreferido) | {pct(B['prevalencia_diabetes'])} na amostra, **{pct(B['prevalencia_diabetes_ponderada'])} ponderada** | {pct(U['prevalencia_diabetes'])} |
+| Diabetes diagnosticado | {pct(B['prevalencia_diabetes'])} na amostra, **{pct(B['prevalencia_diabetes_ponderada'])} ponderada** | {pct(U['prevalencia_diabetes'])} na amostra, **{pct(U['prevalencia_diabetes_ponderada'])} ponderada** |
+
+Nos dois países o desfecho é **diabetes diagnosticado por médico** (autorreferido). No BRFSS foram usados os
+dados originais do CDC, e não a versão do Kaggle do modelo comportamental, porque esta agrupa pré-diabetes com
+diabetes; aqui, pré-diabetes e diabetes apenas na gravidez contam como "não".
 
 As variáveis do VIGITEL foram conferidas no dicionário oficial. Para comparar os países, os modelos usam
 apenas as variáveis com **definição equivalente** nas duas pesquisas:
@@ -277,7 +298,7 @@ apenas as variáveis com **definição equivalente** nas duas pesquisas:
 |---|---|---|
 | IMC médio | {B['imc_medio']:.1f} | {U['imc_medio']:.1f} |
 | Obesidade (IMC ≥ 30) | {pct(B['obesidade'])} | {pct(U['obesidade'])} |
-| Pressão alta | {pct(B['pressao_alta'])} (ponderada: {pct(B['pressao_alta_ponderada'])}) | {pct(U['pressao_alta'])} |
+| Pressão alta | {pct(B['pressao_alta'])} (ponderada: {pct(B['pressao_alta_ponderada'])}) | {pct(U['pressao_alta'])} (ponderada: {pct(U['pressao_alta_ponderada'])}) |
 | Saúde ruim/muito ruim | {pct(B['saude_ruim_ou_muito_ruim'])} | {pct(U['saude_ruim_ou_muito_ruim'])} |
 | Fumante* | {pct(B['fumante*'])} | {pct(U['fumante*'])} |
 | Atividade física* | {pct(B['atividade_fisica*'])} | {pct(U['atividade_fisica*'])} |
@@ -291,9 +312,10 @@ apenas as variáveis com **definição equivalente** nas duas pesquisas:
 |---|---|---|---|---|
 {linhas_faixa}
 
-A diferença de prevalência bruta é estatisticamente significativa (qui-quadrado, p = {p_prev:.2g}), mas as
-amostras têm composição etária diferente. Padronizando o Brasil pela distribuição etária dos EUA, a
-prevalência brasileira fica em **{pct(prev_br_padronizada)}** (EUA: {pct(U['prevalencia_diabetes'])}).
+A diferença de prevalência bruta {'é' if p_prev < 0.05 else 'não é'} estatisticamente significativa (qui-quadrado,
+p = {p_prev:.2g}). As amostras, porém, têm composição etária diferente: a dos EUA é mais velha. Padronizando o
+Brasil pela distribuição etária dos EUA, a prevalência brasileira fica em **{pct(prev_br_padronizada)}**
+(EUA: {pct(U['prevalencia_diabetes'])}): a partir dos 55 anos, a prevalência é maior no Brasil.
 
 ![Prevalência por faixa etária](fig_prevalencia_faixa_etaria.png)
 
@@ -326,8 +348,8 @@ países. F1, precisão e recall dependem do limiar e da prevalência de cada pop
 
 - Pesquisas de anos diferentes (2015 x 2023) e diabetes **autorreferido**, que subestima casos não diagnosticados.
 - A escala de saúde autoavaliada tem âncoras diferentes nas duas pesquisas (ex.: "regular" x "good").
-- O conjunto BRFSS usado é a versão limpa do Kaggle, sem pesos amostrais; as comparações com o Brasil
-  usam a amostra sem ponderação, exceto onde indicado.
+- As prevalências ponderadas usam os pesos amostrais de cada pesquisa; os modelos e as demais comparações usam
+  as amostras sem ponderação.
 - Variáveis importantes nos EUA (colesterol) não puderam ser usadas por não existirem no VIGITEL.
 """
 

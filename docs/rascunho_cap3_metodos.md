@@ -23,7 +23,8 @@ Foram utilizadas quatro bases de dados públicas, resumidas no Quadro 1.
 | Base | Origem | Registros utilizados | Tipo de informação | Uso no trabalho |
 |---|---|---|---|---|
 | Pima Indians Diabetes | NIDDK, EUA | 768 | Exames clínicos | Modelo clínico |
-| BRFSS 2015 | CDC, EUA | 253.680 | Questionário telefônico | Modelo comportamental e validação Brasil x EUA |
+| BRFSS 2015 (versão Kaggle) | CDC, EUA | 253.680 | Questionário telefônico | Modelo comportamental |
+| BRFSS 2015 (dados originais) | CDC, EUA | 360.689 | Questionário telefônico | Validação Brasil x EUA |
 | VIGITEL 2023 | Ministério da Saúde, Brasil | 19.919 | Questionário telefônico | Validação Brasil x EUA |
 | NHANES 2011–2018 | CDC, EUA | 17.306 | Exame físico, exames de sangue e questionário | Estudo de diabetes não diagnosticado |
 
@@ -47,6 +48,12 @@ for Disease Control and Prevention (CDC) [CITAR: CDC, BRFSS]. Foi utilizada a ve
 de forma tratada na plataforma Kaggle [CITAR: Teboul, Diabetes Health Indicators Dataset], com 253.680
 entrevistas. Nessa versão, o desfecho agrupa pré-diabetes e diabetes autorreferidos, com prevalência de 13,9%.
 Por isso, o modelo comportamental estima o risco de "pré-diabetes ou diabetes".
+
+Para a validação entre países (Seção 3.4), em que o desfecho precisa coincidir com o do VIGITEL, foram usados
+os **dados originais** do BRFSS 2015, obtidos diretamente do CDC. Neles, a pergunta sobre diabetes separa
+"sim", "apenas durante a gravidez", "não" e "pré-diabetes"; considerou-se como desfecho apenas o diagnóstico
+de diabetes. Após a exclusão de respostas ausentes e de IMC fora de 10 a 60 kg/m², restaram 360.689 entrevistas,
+com prevalência de 13,0% na amostra e de 10,6% ponderada pelos pesos amostrais.
 
 ### 3.1.3 VIGITEL 2023
 
@@ -164,7 +171,8 @@ variáveis cujas definições diferem entre os inquéritos (Quadro 4).
 
 ### 3.4.2 Modelos e transferência
 
-O mesmo procedimento foi aplicado aos dois países: XGBoost (400 árvores, profundidade 5, taxa 0,05), divisão
+O desfecho foi o diagnóstico médico de diabetes nos dois países (dados originais do BRFSS; Seção 3.1.2). O mesmo
+procedimento foi aplicado aos dois países: XGBoost (400 árvores, profundidade 5, taxa 0,05), divisão
 estratificada 60/20/20 e limiar escolhido pelo maior F1 no conjunto de validação. Cada modelo foi avaliado no
 conjunto de teste do próprio país e no conjunto de teste do outro país (transferência). A AUC foi adotada como
 métrica principal, por não depender do limiar nem da prevalência. A importância das variáveis foi medida pelo
@@ -172,8 +180,9 @@ ganho médio nas árvores.
 
 ### 3.4.3 Análise descritiva
 
-Compararam-se prevalências, distribuição etária, IMC e fatores de risco. A diferença de prevalência foi
-testada pelo teste qui-quadrado. Como as amostras têm composições etárias diferentes, calculou-se também a
+Compararam-se prevalências, distribuição etária, IMC e fatores de risco. As prevalências foram estimadas sem e
+com os pesos amostrais de cada inquérito. A diferença de prevalência nas amostras foi testada pelo teste
+qui-quadrado. Como as amostras têm composições etárias diferentes, calculou-se também a
 prevalência brasileira padronizada pela distribuição etária do BRFSS.
 
 ## 3.5 Estudo de diabetes não diagnosticado (NHANES)

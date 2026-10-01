@@ -85,3 +85,6 @@ credentials.json
 temp/
 tmp/
 *.tmp
+
+# Dados brutos do BRFSS 2015 (baixados por baixar_brfss.py)
+dados_brfss/

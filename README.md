@@ -54,9 +54,9 @@ testa cada modelo também no outro país:
 | Treinado em → testado em | AUC |
 |---|---|
 | Brasil → Brasil | 0,813 |
-| EUA → EUA | 0,814 |
-| EUA → Brasil | 0,814 |
-| Brasil → EUA | 0,773 |
+| EUA → EUA | 0,825 |
+| EUA → Brasil | 0,818 |
+| Brasil → EUA | 0,787 |
 
 O modelo treinado nos EUA ordena o risco da população brasileira tão bem quanto um modelo treinado no Brasil.
 Relatório completo, figuras e limitações: [dados_vigitel/ANALISE_CROSS_CULTURAL.md](dados_vigitel/ANALISE_CROSS_CULTURAL.md).
@@ -107,7 +107,7 @@ O app abre em http://localhost:8501. Deploy no Streamlit Cloud: [DEPLOY_STREAMLI
 | Modelo clínico | `python otimizar_modelo_clinico.py` | `modelo_clinico.json`, `modelo_clinico_meta.json`, `resultados_otimizacao_clinico.json` |
 | Modelo comportamental | `python treinar_modelo_comportamental.py` | `modelo_comportamental.json`, `modelo_comportamental_meta.json` |
 | Dados do VIGITEL | `python mapear_vigitel_completo.py` | `dados_vigitel/vigitel_2023_processado.csv` |
-| Validação Brasil x EUA | `python validacao_cross_cultural.py` | relatório, JSON e figuras em `dados_vigitel/` |
+| Validação Brasil x EUA | `python baixar_brfss.py` e `python validacao_cross_cultural.py` | relatório, JSON e figuras em `dados_vigitel/` |
 | Estudo NHANES | `python baixar_nhanes.py` e `python estudo_nhanes_rastreamento.py` | relatório, JSON e figuras em `dados_nhanes/` |
 | Comparação com a literatura | `python comparacao_literatura.py` | [COMPARACAO_LITERATURA.md](COMPARACAO_LITERATURA.md) |
 
@@ -140,7 +140,9 @@ dados_vigitel/                   Dados, dicionário e resultados do VIGITEL
 ## Dados
 
 - **Pima Indians Diabetes**: 768 mulheres de origem Pima (EUA), com exames clínicos.
-- **BRFSS 2015**: versão limpa do Kaggle do inquérito telefônico do CDC (EUA).
+- **BRFSS 2015**: inquérito telefônico do CDC (EUA). O modelo comportamental usa a versão tratada do Kaggle
+  (pré-diabetes e diabetes agrupados); a validação Brasil x EUA usa os dados originais do CDC, baixados por
+  `baixar_brfss.py`, com o desfecho só de diabetes.
 - **VIGITEL 2023**: inquérito telefônico do Ministério da Saúde (Brasil), com dicionário oficial em `dados_vigitel/`.
 - **NHANES 2011-2018**: inquérito do CDC (EUA) com exame físico e de sangue, baixado por `baixar_nhanes.py`.
 
