@@ -14,7 +14,7 @@ Autor: David Reis · 2026
 
 ## Funcionalidades
 
-- **Cadastro e login** (Supabase Auth), com a sessão mantida ao recarregar a página e recuperação de senha por código.
+- **Cadastro e login** (Supabase Auth), com a sessão mantida ao recarregar a página e recuperação de senha por código (ativada quando o envio de email do Supabase estiver configurado).
 - **Perfil do usuário** (idade, sexo, altura, peso, IMC, histórico familiar, alergias, medicações), usado para preencher os formulários.
 - **Modelo Clínico**: risco a partir de exames (glicemia do TOTG 2h, insulina, pressão diastólica, IMC etc.).
 - **Modelo Comportamental**: risco a partir de 8 perguntas (idade, sexo, IMC, saúde geral, pressão alta, colesterol, atividade física, fumo).
@@ -90,6 +90,8 @@ Crie um arquivo `.env` na raiz:
 ```
 SUPABASE_URL=https://<seu-projeto>.supabase.co
 SUPABASE_KEY=<chave anon>
+# opcional: mostra "Esqueci minha senha" (exige SMTP configurado no Supabase)
+RECUPERACAO_SENHA_ATIVA=1
 ```
 
 ```bash
@@ -147,3 +149,5 @@ dados_vigitel/                   Dados, dicionário e resultados do VIGITEL
 - O dataset clínico é pequeno (768 pacientes) e restrito a mulheres de uma etnia.
 - Nos inquéritos telefônicos o diabetes é **autorreferido**, o que subestima casos não diagnosticados.
 - O VIGITEL não pergunta sobre colesterol alto, então essa variável não entra na comparação entre países.
+- Na versão do BRFSS usada no modelo comportamental, **pré-diabetes e diabetes formam um único grupo**, então esse
+  modelo estima o risco de "pré-diabetes ou diabetes".

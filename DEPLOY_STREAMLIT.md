@@ -102,7 +102,6 @@ Teste TODAS as funcionalidades:
 - [ ] **Perfil pode ser preenchido e salvo**
 - [ ] **Modelo Clínico faz predições**
 - [ ] **Modelo Comportamental faz predições**
-- [ ] **Gráficos SHAP aparecem**
 - [ ] **Gauge de risco visual aparece**
 - [ ] **PDF é gerado e baixado**
 - [ ] **Histórico de predições aparece**
@@ -160,10 +159,9 @@ Capture screenshots para a documentação:
 1. Tela de login/cadastro
 2. Dashboard principal
 3. Modelo Clínico com resultado
-4. Gráfico SHAP explicando predição
-5. Gauge de risco visual
-6. Histórico com evolução temporal
-7. PDF gerado
+4. Gauge de risco visual
+5. Histórico com evolução temporal
+6. PDF gerado
 8. Versão mobile
 
 ---

@@ -564,54 +564,56 @@ if not auth.is_logged_in():
                             else:
                                 st.error(mensagem)
 
-            with st.expander("Esqueci minha senha"):
-                if 'reset_email' not in st.session_state:
-                    with st.form("reset_solicitar_form"):
-                        st.text_input("Email da conta", key="reset_email_input", placeholder="seu@email.com")
-                        enviar_codigo = st.form_submit_button("ENVIAR CÓDIGO", width="stretch", type="primary")
+            # Só aparece com o SMTP configurado no Supabase; sem ele o email com o código não chega
+            if os.getenv("RECUPERACAO_SENHA_ATIVA") == "1":
+                with st.expander("Esqueci minha senha"):
+                    if 'reset_email' not in st.session_state:
+                        with st.form("reset_solicitar_form"):
+                            st.text_input("Email da conta", key="reset_email_input", placeholder="seu@email.com")
+                            enviar_codigo = st.form_submit_button("ENVIAR CÓDIGO", width="stretch", type="primary")
 
-                        if enviar_codigo:
-                            email_reset = st.session_state.reset_email_input.strip()
-                            if not email_reset:
-                                st.error("Informe o email da conta")
-                            else:
-                                with st.spinner("Enviando código..."):
-                                    sucesso, mensagem = auth.solicitar_reset_senha(email_reset)
-                                if sucesso:
-                                    st.session_state.reset_email = email_reset
-                                    st.rerun()
+                            if enviar_codigo:
+                                email_reset = st.session_state.reset_email_input.strip()
+                                if not email_reset:
+                                    st.error("Informe o email da conta")
                                 else:
-                                    st.error(mensagem)
-                else:
-                    st.info(f"Se {st.session_state.reset_email} estiver cadastrado, você receberá um código por email.")
-                    with st.form("reset_confirmar_form"):
-                        st.text_input("Código recebido", key="reset_codigo", max_chars=10, placeholder="Código do email")
-                        st.text_input("Nova senha", type="password", key="reset_nova_senha", placeholder="Mínimo 6 caracteres")
-                        st.text_input("Confirmar nova senha", type="password", key="reset_confirma_senha", placeholder="Repita a senha")
-                        redefinir = st.form_submit_button("REDEFINIR SENHA", width="stretch", type="primary")
+                                    with st.spinner("Enviando código..."):
+                                        sucesso, mensagem = auth.solicitar_reset_senha(email_reset)
+                                    if sucesso:
+                                        st.session_state.reset_email = email_reset
+                                        st.rerun()
+                                    else:
+                                        st.error(mensagem)
+                    else:
+                        st.info(f"Se {st.session_state.reset_email} estiver cadastrado, você receberá um código por email.")
+                        with st.form("reset_confirmar_form"):
+                            st.text_input("Código recebido", key="reset_codigo", max_chars=10, placeholder="Código do email")
+                            st.text_input("Nova senha", type="password", key="reset_nova_senha", placeholder="Mínimo 6 caracteres")
+                            st.text_input("Confirmar nova senha", type="password", key="reset_confirma_senha", placeholder="Repita a senha")
+                            redefinir = st.form_submit_button("REDEFINIR SENHA", width="stretch", type="primary")
 
-                        if redefinir:
-                            codigo = st.session_state.reset_codigo.strip()
-                            nova_senha = st.session_state.reset_nova_senha
-                            if not codigo or not nova_senha:
-                                st.error("Preencha o código e a nova senha")
-                            elif nova_senha != st.session_state.reset_confirma_senha:
-                                st.error("As senhas não coincidem")
-                            elif len(nova_senha) < 6:
-                                st.error("Senha deve ter no mínimo 6 caracteres")
-                            else:
-                                with st.spinner("Redefinindo senha..."):
-                                    sucesso, mensagem = auth.redefinir_senha(st.session_state.reset_email, codigo, nova_senha)
-                                if sucesso:
-                                    del st.session_state.reset_email
-                                    auth.carregar_perfil()
-                                    st.rerun()
+                            if redefinir:
+                                codigo = st.session_state.reset_codigo.strip()
+                                nova_senha = st.session_state.reset_nova_senha
+                                if not codigo or not nova_senha:
+                                    st.error("Preencha o código e a nova senha")
+                                elif nova_senha != st.session_state.reset_confirma_senha:
+                                    st.error("As senhas não coincidem")
+                                elif len(nova_senha) < 6:
+                                    st.error("Senha deve ter no mínimo 6 caracteres")
                                 else:
-                                    st.error(mensagem)
+                                    with st.spinner("Redefinindo senha..."):
+                                        sucesso, mensagem = auth.redefinir_senha(st.session_state.reset_email, codigo, nova_senha)
+                                    if sucesso:
+                                        del st.session_state.reset_email
+                                        auth.carregar_perfil()
+                                        st.rerun()
+                                    else:
+                                        st.error(mensagem)
 
-                    if st.button("Usar outro email / reenviar código", width="stretch"):
-                        del st.session_state.reset_email
-                        st.rerun()
+                        if st.button("Usar outro email / reenviar código", width="stretch"):
+                            del st.session_state.reset_email
+                            st.rerun()
 
         with tab2:
             with st.form("signup_form"):
@@ -1066,6 +1068,8 @@ elif pagina == "Modelo Clínico":
 elif pagina == "Modelo Comportamental":
     st.markdown('<div class="main-header">Modelo Comportamental (BRFSS)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Predição baseada em hábitos de vida (SEM exames)</div>', unsafe_allow_html=True)
+    st.caption("Estima o risco de **pré-diabetes ou diabetes**: na base usada (BRFSS 2015) os dois são agrupados, "
+               "e o diagnóstico é autorreferido pelos entrevistados.")
     
     
     opcoes_saude = ["Excelente", "Muito boa", "Boa", "Razoável", "Ruim"]
