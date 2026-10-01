@@ -59,14 +59,8 @@ CREATE INDEX IF NOT EXISTS idx_predicoes_user_id ON predicoes(user_id);
 -- Habilitar RLS na tabela predicoes
 ALTER TABLE predicoes ENABLE ROW LEVEL SECURITY;
 
--- Policy: usuário só vê suas próprias predições
-CREATE POLICY "Users can view own predictions"
-    ON predicoes FOR SELECT
-    USING (auth.uid() = user_id OR user_id IS NULL);
-
-CREATE POLICY "Users can insert own predictions"
-    ON predicoes FOR INSERT
-    WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+-- Policies das predições, exclusão de conta e demais regras de privacidade:
+-- rode privacidade_lgpd.sql depois deste arquivo.
 
 -- Comentários
 COMMENT ON TABLE user_profiles IS 'Perfis estendidos dos usuários do sistema TCC';

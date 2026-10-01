@@ -62,12 +62,15 @@ class SupabaseDB:
             probabilidade: Probabilidade de diabetes (0.0 a 1.0)
             session_id: ID da sessão do usuário
             user_agent: User agent do navegador
-            user_id: ID do usuário logado (UUID)
+            user_id: ID do usuário logado (UUID); obrigatório
 
         Returns:
             True se salvou com sucesso, False caso contrário
         """
         if not self.conectado or not self.client:
+            return False
+        # Avaliação sem dono não é salva (e o banco também recusa, ver privacidade_lgpd.sql)
+        if not user_id:
             return False
 
         try:

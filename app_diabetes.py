@@ -23,7 +23,8 @@ warnings.filterwarnings('ignore')
 
 # Importar módulos
 from supabase_db import db as supabase_db
-from auth import auth
+from auth import auth, SENHA_MINIMA
+from privacidade import TERMO_PRIVACIDADE
 from pdf_generator import gerar_relatorio_predicao
 # from shap_explicabilidade import criar_grafico_barras_shap, obter_top_features_shap  # Desabilitado - muito pesado
 from gauge_component import criar_gauge_risco
@@ -536,6 +537,8 @@ if not auth.is_logged_in():
         st.markdown('<div class="main-header">Sistema de Predição de Diabetes</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-header">Análise inteligente de risco com IA</div>', unsafe_allow_html=True)
 
+        if st.session_state.pop('conta_excluida', False):
+            st.success("Sua conta e todos os seus dados foram excluídos.")
 
         # Tabs de Login/Cadastro
         tab1, tab2 = st.tabs(["Login", "Cadastrar"])
@@ -588,7 +591,7 @@ if not auth.is_logged_in():
                         st.info(f"Se {st.session_state.reset_email} estiver cadastrado, você receberá um código por email.")
                         with st.form("reset_confirmar_form"):
                             st.text_input("Código recebido", key="reset_codigo", max_chars=10, placeholder="Código do email")
-                            st.text_input("Nova senha", type="password", key="reset_nova_senha", placeholder="Mínimo 6 caracteres")
+                            st.text_input("Nova senha", type="password", key="reset_nova_senha", placeholder=f"Mínimo {SENHA_MINIMA} caracteres")
                             st.text_input("Confirmar nova senha", type="password", key="reset_confirma_senha", placeholder="Repita a senha")
                             redefinir = st.form_submit_button("REDEFINIR SENHA", width="stretch", type="primary")
 
@@ -599,8 +602,8 @@ if not auth.is_logged_in():
                                     st.error("Preencha o código e a nova senha")
                                 elif nova_senha != st.session_state.reset_confirma_senha:
                                     st.error("As senhas não coincidem")
-                                elif len(nova_senha) < 6:
-                                    st.error("Senha deve ter no mínimo 6 caracteres")
+                                elif len(nova_senha) < SENHA_MINIMA:
+                                    st.error(f"Senha deve ter no mínimo {SENHA_MINIMA} caracteres")
                                 else:
                                     with st.spinner("Redefinindo senha..."):
                                         sucesso, mensagem = auth.redefinir_senha(st.session_state.reset_email, codigo, nova_senha)
@@ -616,6 +619,9 @@ if not auth.is_logged_in():
                             st.rerun()
 
         with tab2:
+            with st.expander("Ler Termo de Consentimento e Política de Privacidade"):
+                st.markdown(TERMO_PRIVACIDADE)
+
             with st.form("signup_form"):
                 st.markdown("#### Crie sua conta gratuitamente")
                 st.text_input("Nome Completo", key="nome_cadastro", placeholder="Seu nome completo")
@@ -624,10 +630,16 @@ if not auth.is_logged_in():
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
                     st.text_input("Senha", type="password", key="senha_cadastro",
-                                help="Mínimo 6 caracteres", placeholder="Sua senha")
+                                help=f"Mínimo {SENHA_MINIMA} caracteres", placeholder="Sua senha")
                 with col_s2:
                     st.text_input("Confirmar Senha", type="password", key="senha_confirma",
                                 placeholder="Repita a senha")
+
+                st.checkbox(
+                    "Li e aceito o Termo de Consentimento e a Política de Privacidade, "
+                    "incluindo o tratamento dos meus dados de saúde",
+                    key="aceite_termo_cadastro",
+                )
 
                 submit_cadastro = st.form_submit_button("CRIAR CONTA", width="stretch", type="primary")
 
@@ -639,10 +651,12 @@ if not auth.is_logged_in():
 
                     if not email_cadastro or not senha_cadastro or not nome_cadastro:
                         st.error("Por favor, preencha todos os campos")
+                    elif not st.session_state.aceite_termo_cadastro:
+                        st.error("Para criar a conta, é preciso aceitar o Termo de Consentimento")
                     elif senha_cadastro != senha_confirma:
                         st.error("As senhas não coincidem")
-                    elif len(senha_cadastro) < 6:
-                        st.error("Senha deve ter no mínimo 6 caracteres")
+                    elif len(senha_cadastro) < SENHA_MINIMA:
+                        st.error(f"Senha deve ter no mínimo {SENHA_MINIMA} caracteres")
                     else:
                         with st.spinner("Criando conta..."):
                             sucesso, mensagem = auth.signup(email_cadastro, senha_cadastro, nome_cadastro)
@@ -665,6 +679,54 @@ if not auth.is_logged_in():
             </div>
         """, unsafe_allow_html=True)
 
+    st.stop()
+
+# ============================================================================
+# CONSENTIMENTO (contas criadas antes do termo, ou termo atualizado)
+# ============================================================================
+
+def secao_excluir_conta():
+    """Exclusão da conta e de todos os dados (LGPD art. 18, VI)"""
+    with st.expander("Excluir minha conta"):
+        st.warning("Isto apaga **definitivamente** sua conta, seu perfil e todas as suas avaliações. "
+                   "Não é possível desfazer.")
+        confirmacao = st.text_input("Para confirmar, digite EXCLUIR", key="confirma_exclusao")
+        if st.button("Excluir minha conta e meus dados", type="primary", width="stretch",
+                     disabled=confirmacao.strip().upper() != "EXCLUIR"):
+            with st.spinner("Excluindo..."):
+                sucesso, mensagem = auth.excluir_conta()
+            if sucesso:
+                st.session_state.conta_excluida = True
+                st.rerun()
+            else:
+                st.error(mensagem)
+
+if not auth.consentimento_em_dia():
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown('<div class="main-header">Privacidade dos seus dados</div>', unsafe_allow_html=True)
+        st.info("Para continuar usando o sistema, leia e aceite o termo abaixo.")
+        with st.container(height=400):
+            st.markdown(TERMO_PRIVACIDADE)
+
+        aceite = st.checkbox(
+            "Li e aceito o Termo de Consentimento e a Política de Privacidade, "
+            "incluindo o tratamento dos meus dados de saúde"
+        )
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("CONTINUAR", type="primary", width="stretch", disabled=not aceite):
+                sucesso, mensagem = auth.registrar_consentimento()
+                if sucesso:
+                    st.rerun()
+                else:
+                    st.error(mensagem)
+        with col_b:
+            if st.button("Não aceito (sair)", width="stretch"):
+                auth.logout()
+                st.rerun()
+        st.markdown("---")
+        secao_excluir_conta()
     st.stop()
 
 # ============================================================================
@@ -810,6 +872,12 @@ elif pagina == "Meu Perfil":
             st.success("Perfil salvo com sucesso!")
         else:
             st.warning(f"Perfil salvo localmente. Erro no banco: {msg_bd}")
+
+    st.markdown("---")
+    st.markdown("### Privacidade e Dados")
+    with st.expander("Termo de Consentimento e Política de Privacidade"):
+        st.markdown(TERMO_PRIVACIDADE)
+    secao_excluir_conta()
 
 # ============================================================================
 # PÁGINA MODELO CLÍNICO

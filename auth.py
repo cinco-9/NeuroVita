@@ -5,12 +5,16 @@ Sistema de login, cadastro e gerenciamento de usuários
 """
 
 import json
+from datetime import datetime, timezone
 import streamlit as st
 from supabase_db import db as supabase_db
+from privacidade import VERSAO_TERMO
 from typing import Optional, Dict
 
 COOKIE_SESSAO = "dp_refresh_token"
 COOKIE_DURACAO_S = 30 * 24 * 3600
+# Manter igual ao mínimo configurado no Supabase (Authentication > Policies)
+SENHA_MINIMA = 8
 
 
 class Auth:
@@ -18,7 +22,12 @@ class Auth:
 
     @staticmethod
     def _iniciar_sessao(user, session):
-        st.session_state.user = {'id': user.id, 'email': user.email}
+        metadata = user.user_metadata or {}
+        st.session_state.user = {
+            'id': user.id,
+            'email': user.email,
+            'consentimento_versao': metadata.get('consentimento_versao'),
+        }
         st.session_state.logout_feito = False
         if session and session.refresh_token:
             st.session_state.cookie_pendente = session.refresh_token
@@ -83,6 +92,48 @@ class Auth:
         return user['email'] if user else None
 
     @staticmethod
+    def _dados_consentimento() -> Dict:
+        return {
+            'consentimento_versao': VERSAO_TERMO,
+            'consentimento_em': datetime.now(timezone.utc).isoformat(),
+        }
+
+    @staticmethod
+    def consentimento_em_dia() -> bool:
+        """True se o usuário logado aceitou a versão atual do termo de privacidade"""
+        user = Auth.get_user()
+        return bool(user) and user.get('consentimento_versao') == VERSAO_TERMO
+
+    @staticmethod
+    def registrar_consentimento() -> tuple[bool, str]:
+        """Grava o aceite do termo nos metadados do usuário (contas criadas antes do termo)"""
+        if not supabase_db.conectado or not supabase_db.client:
+            return False, "Erro: Supabase não está conectado"
+        try:
+            supabase_db.client.auth.update_user({"data": Auth._dados_consentimento()})
+            st.session_state.user['consentimento_versao'] = VERSAO_TERMO
+            return True, "Consentimento registrado"
+        except Exception as e:
+            print(f"Erro ao registrar consentimento: {e}")
+            return False, "Não foi possível registrar o consentimento. Tente novamente."
+
+    @staticmethod
+    def excluir_conta() -> tuple[bool, str]:
+        """Apaga a conta, o perfil e todas as avaliações do usuário logado"""
+        if not Auth.is_logged_in():
+            return False, "Usuário não está logado"
+        if not supabase_db.conectado or not supabase_db.client:
+            return False, "Erro: Supabase não está conectado"
+        try:
+            # Função excluir_minha_conta() criada em privacidade_lgpd.sql
+            supabase_db.client.rpc('excluir_minha_conta').execute()
+        except Exception as e:
+            print(f"Erro ao excluir conta: {e}")
+            return False, "Não foi possível excluir a conta. Tente novamente mais tarde."
+        Auth.logout()
+        return True, "Sua conta e todos os seus dados foram excluídos."
+
+    @staticmethod
     def login(email: str, password: str) -> tuple[bool, str]:
         """
         Faz login do usuário
@@ -113,7 +164,8 @@ class Auth:
             elif "Email not confirmed" in error_msg:
                 return False, "Email não confirmado. Verifique sua caixa de entrada."
             else:
-                return False, f"Erro ao fazer login: {error_msg}"
+                print(f"Erro ao fazer login: {error_msg}")
+                return False, "Não foi possível fazer login. Tente novamente mais tarde."
 
     @staticmethod
     def signup(email: str, password: str, nome: str = "") -> tuple[bool, str]:
@@ -128,9 +180,11 @@ class Auth:
 
         try:
             # Criar usuário
+            # Só é chamado depois do aceite do termo; o registro fica nos metadados do usuário
             response = supabase_db.client.auth.sign_up({
                 "email": email,
-                "password": password
+                "password": password,
+                "options": {"data": Auth._dados_consentimento()},
             })
 
             if response.user:
@@ -159,9 +213,10 @@ class Auth:
             if "already registered" in error_msg.lower() or "already been registered" in error_msg.lower():
                 return False, "Este email já está cadastrado. Faça login!"
             elif "Password should be at least" in error_msg:
-                return False, "Senha deve ter no mínimo 6 caracteres"
+                return False, f"Senha deve ter no mínimo {SENHA_MINIMA} caracteres"
             else:
-                return False, f"Erro ao cadastrar: {error_msg}"
+                print(f"Erro ao cadastrar: {error_msg}")
+                return False, "Não foi possível criar a conta. Tente novamente mais tarde."
 
     @staticmethod
     def solicitar_reset_senha(email: str) -> tuple[bool, str]:
@@ -177,7 +232,8 @@ class Auth:
             error_msg = str(e)
             if "rate limit" in error_msg.lower() or "seconds" in error_msg.lower():
                 return False, "Aguarde alguns instantes antes de pedir um novo código."
-            return False, f"Erro ao enviar código: {error_msg}"
+            print(f"Erro ao enviar código: {error_msg}")
+            return False, "Não foi possível enviar o código. Tente novamente mais tarde."
 
     @staticmethod
     def redefinir_senha(email: str, codigo: str, nova_senha: str) -> tuple[bool, str]:
@@ -205,8 +261,9 @@ class Auth:
             if "should be different" in error_msg.lower():
                 return False, "A nova senha deve ser diferente da anterior"
             if "Password should be at least" in error_msg:
-                return False, "Senha deve ter no mínimo 6 caracteres"
-            return False, f"Erro ao alterar senha: {error_msg}"
+                return False, f"Senha deve ter no mínimo {SENHA_MINIMA} caracteres"
+            print(f"Erro ao alterar senha: {error_msg}")
+            return False, "Não foi possível alterar a senha. Tente novamente mais tarde."
 
     @staticmethod
     def logout():
@@ -298,7 +355,8 @@ class Auth:
 
                 return True, "Perfil salvo no banco de dados!"
         except Exception as e:
-            return False, f"Erro ao salvar perfil: {str(e)}"
+            print(f"Erro ao salvar perfil: {e}")
+            return False, "não foi possível salvar no banco de dados"
 
 # Instância global
 auth = Auth()

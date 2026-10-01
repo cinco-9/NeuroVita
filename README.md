@@ -21,6 +21,7 @@ Autor: David Reis · 2026
 - **Resultado** com probabilidade, medidor visual, fatores de risco identificados e recomendações.
 - **Relatório em PDF** para levar ao médico.
 - **Histórico** das avaliações de cada usuário.
+- **Privacidade (LGPD)**: termo de consentimento no cadastro, cada usuário só acessa os próprios dados (RLS no Supabase) e pode excluir a conta com todos os dados pelo próprio app.
 
 ## Modelos
 
@@ -92,7 +93,11 @@ SUPABASE_URL=https://<seu-projeto>.supabase.co
 SUPABASE_KEY=<chave anon>
 # opcional: mostra "Esqueci minha senha" (exige SMTP configurado no Supabase)
 RECUPERACAO_SENHA_ATIVA=1
+# opcional: email exibido no termo de privacidade para pedidos sobre os dados
+CONTATO_PRIVACIDADE=
 ```
+
+No Supabase SQL Editor, rode `create_table.sql`, `create_users_table.sql` e `privacidade_lgpd.sql`, nessa ordem.
 
 ```bash
 python -m streamlit run app_diabetes.py
