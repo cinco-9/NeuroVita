@@ -85,7 +85,7 @@ class RelatorioPDF:
         data_info = [
             ['Paciente:', nome_paciente],
             ['Data do Relatório:', data],
-            ['Gerado por:', 'Sistema TCC - David Reis']
+            ['Gerado por:', 'Sistema de Predição de Diabetes - David Reis']
         ]
 
         tabela = Table(data_info, colWidths=[2*inch, 4*inch])

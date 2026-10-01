@@ -1,10 +1,11 @@
-# Core ML (versões leves para 1GB RAM)
-numpy<2.0
+# Core
+numpy<3.0
 pandas<3.0
-scikit-learn<2.0
 
-# ML Model (essencial)
-xgboost<3.0
+# ML Model: os modelos (.json) foram salvos com xgboost 3.4; versões anteriores leem o intercepto
+# do modelo comportamental de forma diferente e mudam as probabilidades (testado com 3.0.0)
+xgboost>=3.4,<4.0
+# scikit-learn não é necessário no app: os modelos são carregados pelo Booster nativo do XGBoost
 
 # Explainability (REMOVIDO - muito pesado)
 # shap - desabilitado temporariamente

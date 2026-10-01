@@ -1,0 +1,53 @@
+{
+  "metodo": "validação cruzada aninhada 5x3 (externa) / 5 (interna); limiar por F1 no treino",
+  "resultados": {
+    "Regressão Logística": {
+      "f1_media": 0.6693,
+      "precisao_media": 0.5777,
+      "recall_media": 0.8022,
+      "auc_media": 0.8329,
+      "brier_media": 0.159,
+      "limiar_media": 0.2827,
+      "f1_desvio": 0.0423,
+      "f1_erro_padrao": 0.0109
+    },
+    "XGBoost": {
+      "f1_media": 0.6779,
+      "precisao_media": 0.5921,
+      "recall_media": 0.8034,
+      "auc_media": 0.8322,
+      "brier_media": 0.1588,
+      "limiar_media": 0.3027,
+      "f1_desvio": 0.0375,
+      "f1_erro_padrao": 0.0097
+    },
+    "Random Forest": {
+      "f1_media": 0.6911,
+      "precisao_media": 0.5988,
+      "recall_media": 0.8221,
+      "auc_media": 0.8387,
+      "brier_media": 0.1576,
+      "limiar_media": 0.3333,
+      "f1_desvio": 0.0382,
+      "f1_erro_padrao": 0.0099
+    },
+    "SVM": {
+      "f1_media": 0.6688,
+      "precisao_media": 0.5752,
+      "recall_media": 0.8097,
+      "auc_media": 0.8269,
+      "brier_media": 0.1626,
+      "limiar_media": 0.2653,
+      "f1_desvio": 0.0406,
+      "f1_erro_padrao": 0.0105
+    }
+  },
+  "maior_f1": "Random Forest",
+  "escolhido": "Random Forest",
+  "params_finais": {
+    "imputer__add_indicator": false,
+    "modelo__max_depth": 4,
+    "modelo__min_samples_leaf": 1
+  },
+  "limiar_final": 0.3899999999999999
+}

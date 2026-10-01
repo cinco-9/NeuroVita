@@ -8,14 +8,15 @@ Autor: David Reis
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import VotingClassifier
 import xgboost as xgb
 # import lightgbm as lgb  # Desabilitado para economizar RAM
 # from catboost import CatBoostClassifier  # Desabilitado para economizar RAM
 import matplotlib.pyplot as plt
 # import seaborn as sns  # Desabilitado - usa matplotlib
 import warnings
+import os
+import re
+import tempfile
 import uuid
 from datetime import datetime
 warnings.filterwarnings('ignore')
@@ -27,11 +28,11 @@ from pdf_generator import gerar_relatorio_predicao
 # from shap_explicabilidade import criar_grafico_barras_shap, obter_top_features_shap  # Desabilitado - muito pesado
 from gauge_component import criar_gauge_risco
 from analise_temporal import criar_grafico_evolucao, criar_grafico_progresso, calcular_estatisticas_evolucao
-import pickle
+import json
 
 # Configuração da página
 st.set_page_config(
-    page_title="Predição de Diabetes - TCC",
+    page_title="Predição de Diabetes",
     page_icon="⚕",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -42,241 +43,354 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+    :root {
+        --bg: #141414;
+        --sidebar: #171717;
+        --surface: #1b1b1b;
+        --surface-2: #222222;
+        --border: #2c2c2c;
+        --border-strong: #3a3a3a;
+        --text: #e8e8e8;
+        --muted: #a3a3a3;
+        --accent: #4fb9c4;
+        --accent-hover: #6cc8d1;
+        --accent-soft: rgba(79, 185, 196, 0.14);
+        --on-accent: #0e1f22;
+        --success: #4ade80;
+        --success-soft: rgba(34, 197, 94, 0.14);
+        --danger: #f87171;
+        --danger-soft: rgba(239, 68, 68, 0.14);
+        --warning: #fbbf24;
+        --warning-soft: rgba(245, 158, 11, 0.14);
+    }
+
     .stApp {
-        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 50%, #16213e 100%);
-        background-attachment: fixed;
+        background: var(--bg);
+    }
+
+    .block-container {
+        max-width: 1150px !important;
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
     }
 
     * {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        color: #e0e0e0;
+        color: var(--text);
     }
 
     .main-header {
-        font-size: 24px;
-        font-weight: 700;
+        font-size: 28px;
+        font-weight: 800;
         text-align: center;
-        background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        padding: 8px 8px;
-        margin-bottom: 2px;
-        letter-spacing: -0.3px;
+        color: var(--text);
+        padding: 8px 8px 5px;
+        margin-bottom: 3px;
+        letter-spacing: -0.5px;
     }
 
     .sub-header {
-        font-size: 12px;
+        font-size: 13px;
         text-align: center;
-        color: #a0a0a0;
-        padding-bottom: 10px;
+        color: var(--muted);
+        padding-bottom: 12px;
         font-weight: 400;
+        letter-spacing: 0.5px;
+    }
+
+
+    /* Logo Icon */
+    .logo-icon {
+        text-align: center;
+        font-size: 50px;
+        margin-bottom: 5px;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
     }
 
     .metric-box {
-        background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%);
+        background: var(--surface);
         padding: 30px;
         border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: transform 0.3s ease;
+        border: 1px solid var(--border);
+        transition: transform 0.3s ease, border-color 0.3s ease;
     }
 
     .metric-box:hover {
         transform: translateY(-5px);
-        box-shadow: 0 15px 40px rgba(0, 212, 255, 0.3);
+        border-color: var(--accent);
     }
 
     .result-high {
-        background: linear-gradient(135deg, #1a0a0f 0%, #3d1a28 100%);
+        background: var(--danger-soft);
         padding: 30px;
         border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(255, 0, 60, 0.3);
-        border: 2px solid #ff0040;
+        border: 1px solid var(--danger);
     }
 
     .result-high h3 {
-        color: #ff4060 !important;
+        color: var(--danger) !important;
+        -webkit-text-fill-color: var(--danger) !important;
         font-weight: 700;
         font-size: 28px;
-        text-shadow: 0 0 20px rgba(255, 64, 96, 0.5);
     }
 
     .result-low {
-        background: linear-gradient(135deg, #0a1a1f 0%, #1a3d44 100%);
+        background: var(--success-soft);
         padding: 30px;
         border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 255, 170, 0.2);
-        border: 2px solid #00ffaa;
+        border: 1px solid var(--success);
     }
 
     .result-low h3 {
-        color: #00ffaa !important;
+        color: var(--success) !important;
+        -webkit-text-fill-color: var(--success) !important;
         font-weight: 700;
         font-size: 28px;
-        text-shadow: 0 0 20px rgba(0, 255, 170, 0.5);
     }
 
     .stButton>button {
-        background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
-        color: white;
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border-strong);
         border-radius: 12px;
         padding: 12px 30px;
         font-weight: 600;
-        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
         transition: all 0.3s ease;
     }
 
     .stButton>button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 30px rgba(0, 212, 255, 0.6);
+        border-color: var(--accent);
+        color: var(--accent);
     }
 
     .stTextInput>div>div>input,
     .stNumberInput>div>div>input,
     .stSelectbox>div>div>select {
-        background-color: #1a1a2e !important;
-        border: 1px solid rgba(0, 212, 255, 0.3) !important;
-        border-radius: 6px !important;
-        color: #e0e0e0 !important;
-        padding: 6px 10px !important;
-        font-size: 12px !important;
-        transition: all 0.3s ease !important;
+        background-color: var(--surface-2) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important;
+        color: var(--text) !important;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        -webkit-text-fill-color: var(--text) !important;
+    }
+
+    /* Ícone de mostrar/esconder senha */
+    .stTextInput button[kind="icon"] {
+        background: transparent !important;
+        border: none !important;
+        color: var(--muted) !important;
+    }
+
+    .stTextInput button[kind="icon"]:hover {
+        background: var(--accent-soft) !important;
+        color: var(--accent) !important;
     }
 
     .stTextInput>div>div>input:focus,
     .stNumberInput>div>div>input:focus {
-        border-color: #00d4ff !important;
-        box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.3) !important;
-        background-color: #252540 !important;
-        transform: translateY(-2px);
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-soft) !important;
+        transform: translateY(-1px) scale(1.01);
     }
 
-    .stTextInput>div>div>input::placeholder {
-        color: rgba(255, 255, 255, 0.4) !important;
+    /* -webkit-text-fill-color do input sobrescreve a cor do placeholder no Chrome */
+    input::placeholder {
+        color: #8a8a8a !important;
+        -webkit-text-fill-color: #8a8a8a !important;
+        opacity: 1 !important;
+        font-weight: 500 !important;
     }
 
     /* Labels dos inputs */
     .stTextInput label,
     .stNumberInput label,
     .stSelectbox label {
-        color: #00d4ff !important;
+        color: var(--muted) !important;
         font-weight: 600 !important;
-        font-size: 11px !important;
-        margin-bottom: 3px !important;
+        font-size: 13px !important;
+        margin-bottom: 8px !important;
+        letter-spacing: 0.3px;
     }
 
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f0f0f 0%, #1a1a2e 100%);
+        background: var(--sidebar);
+        border-right: 1px solid var(--border);
     }
 
     /* Tabs melhoradas */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: transparent;
+        gap: 10px;
+        background: var(--surface);
+        padding: 6px;
+        border-radius: 14px;
+        margin-bottom: 15px;
     }
 
     .stTabs [data-baseweb="tab"] {
-        background: rgba(26, 26, 46, 0.6) !important;
-        border: 1px solid rgba(0, 212, 255, 0.2) !important;
-        border-radius: 6px !important;
-        padding: 6px 16px !important;
-        color: #e0e0e0 !important;
+        background: transparent !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+        padding: 10px 24px !important;
+        color: var(--muted) !important;
         font-weight: 600 !important;
-        font-size: 12px !important;
-        transition: all 0.3s ease !important;
+        font-size: 13px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        letter-spacing: 0.5px;
     }
 
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(0, 212, 255, 0.15) !important;
-        border-color: rgba(0, 212, 255, 0.5) !important;
+        background: var(--surface-2) !important;
         transform: translateY(-2px);
+        color: var(--text) !important;
     }
 
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(123, 44, 191, 0.3)) !important;
-        border-color: #00d4ff !important;
-        box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4) !important;
+        background: var(--accent-soft) !important;
+        border-color: var(--accent) !important;
+        color: var(--accent) !important;
+        transform: translateY(-1px);
     }
 
     /* Botão melhorado */
-    button[kind="primary"] {
-        background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%) !important;
+    button[kind="primary"],
+    button[kind="primaryFormSubmit"] {
+        background: var(--accent) !important;
         border: none !important;
-        border-radius: 6px !important;
-        padding: 7px 20px !important;
+        border-radius: 12px !important;
+        padding: 12px 28px !important;
         font-weight: 700 !important;
-        font-size: 12px !important;
-        color: white !important;
-        box-shadow: 0 3px 12px rgba(0, 212, 255, 0.4) !important;
-        transition: all 0.3s ease !important;
+        font-size: 14px !important;
+        color: var(--on-accent) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
+        letter-spacing: 1px !important;
     }
 
-    button[kind="primary"]:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 5px 20px rgba(0, 212, 255, 0.6) !important;
-        background: linear-gradient(135deg, #00ffff 0%, #9945ff 100%) !important;
+    button[kind="primary"] *,
+    button[kind="primaryFormSubmit"] * {
+        color: var(--on-accent) !important;
+    }
+
+    button[kind="primary"]:hover,
+    button[kind="primaryFormSubmit"]:hover {
+        transform: translateY(-3px) scale(1.02) !important;
+        background: var(--accent-hover) !important;
+    }
+
+    button[kind="primary"]:active,
+    button[kind="primaryFormSubmit"]:active {
+        transform: translateY(-1px) scale(0.98) !important;
     }
 
     /* Container do form */
     [data-testid="stForm"] {
-        background: rgba(26, 26, 46, 0.3) !important;
-        border: 1px solid rgba(0, 212, 255, 0.2) !important;
-        border-radius: 10px !important;
-        padding: 14px !important;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5) !important;
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 15px !important;
+        padding: 18px !important;
     }
 
-    /* Headings */
-    h1, h2, h3 {
-        color: #e0e0e0 !important;
+    /* Headings melhorados */
+    h1, h2, h3, h4 {
+        color: var(--text) !important;
         font-weight: 700 !important;
     }
 
     h3 {
         font-size: 16px !important;
         margin-bottom: 8px !important;
-        background: linear-gradient(135deg, #00d4ff 0%, #ffffff 100%);
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
+        color: var(--accent) !important;
         font-weight: 700 !important;
     }
 
-    p {
-        color: #e0e0e0 !important;
-        font-size: 12px !important;
+    h4 {
+        font-size: 18px !important;
+        margin-bottom: 18px !important;
+        margin-top: 5px !important;
+        color: var(--text) !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.3px;
+    }
+
+    p, li {
+        color: var(--text) !important;
+        font-size: 14px !important;
+    }
+
+    p.prob {
+        font-size: 24px !important;
+        margin: 4px 0 8px !important;
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 8px;
+    }
+
+    .auth-footer p {
+        margin-bottom: 4px;
     }
 
     /* Linha separadora */
     hr {
-        border-color: rgba(0, 212, 255, 0.2) !important;
+        border-color: var(--border) !important;
         margin: 10px 0 !important;
     }
 
-    /* Efeitos de erro e sucesso */
+    /* Efeitos de erro e sucesso melhorados */
     .stSuccess, .stError, .stWarning, .stInfo {
-        border-radius: 12px !important;
-        padding: 16px !important;
+        border-radius: 14px !important;
+        padding: 18px 20px !important;
         font-weight: 500 !important;
+        font-size: 14px !important;
+        animation: slideInRight 0.4s ease-out;
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
     }
 
     .stSuccess {
-        background: rgba(0, 255, 170, 0.1) !important;
-        border: 2px solid rgba(0, 255, 170, 0.3) !important;
+        background: var(--success-soft) !important;
+        border: 1px solid var(--success) !important;
     }
 
     .stError {
-        background: rgba(255, 0, 64, 0.1) !important;
-        border: 2px solid rgba(255, 0, 64, 0.3) !important;
+        background: var(--danger-soft) !important;
+        border: 1px solid var(--danger) !important;
+    }
+
+    .stWarning {
+        background: var(--warning-soft) !important;
+        border: 1px solid var(--warning) !important;
+    }
+
+    .stInfo {
+        background: var(--accent-soft) !important;
+        border: 1px solid var(--accent) !important;
     }
 
     /* Melhorar selectbox */
     .stSelectbox>div>div>select {
-        background-color: #1a1a2e !important;
-        border: 2px solid rgba(0, 212, 255, 0.3) !important;
+        background-color: var(--surface-2) !important;
+        border: 1px solid var(--border) !important;
         border-radius: 12px !important;
-        color: #e0e0e0 !important;
+        color: var(--text) !important;
         padding: 12px !important;
     }
 
@@ -306,55 +420,43 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Cache dos modelos REAIS
+# Modelos em JSON nativo do XGBoost, carregados pelo Booster: não dependem de pickle nem do scikit-learn,
+# cujas versões variam entre esta máquina e o Streamlit Cloud
 @st.cache_resource
-def carregar_modelo_pima():
-    """Carrega modelo REAL treinado no Pima Indians"""
-    try:
-        with open('modelo_melhorado_clinico.pkl', 'rb') as f:
-            modelo = pickle.load(f)
-        return modelo
-    except Exception as e:
-        st.error(f"Erro ao carregar modelo clínico: {e}")
-        # Fallback: modelo básico
-        modelo = xgb.XGBClassifier(
-            n_estimators=100,
-            max_depth=4,
-            learning_rate=0.1,
-            random_state=42,
-            eval_metric='logloss'
-        )
-        return modelo
+def carregar_modelo(nome):
+    """Devolve (modelo, meta) de <nome>.json / <nome>_meta.json; meta['tipo'] = 'xgboost' ou 'random_forest'"""
+    with open(f'{nome}_meta.json', encoding='utf-8') as f:
+        meta = json.load(f)
+    if meta['tipo'] == 'xgboost':
+        modelo = xgb.Booster()
+        modelo.load_model(f'{nome}.json')
+    else:
+        with open(f'{nome}.json', encoding='utf-8') as f:
+            modelo = [{k: np.array(v) for k, v in arvore.items()} for arvore in json.load(f)['arvores']]
+    return modelo, meta
 
-@st.cache_resource
-def carregar_scaler():
-    """Carrega scaler para normalização"""
-    try:
-        with open('scaler_melhorado.pkl', 'rb') as f:
-            scaler = pickle.load(f)
-        return scaler
-    except Exception as e:
-        st.warning(f"Scaler não encontrado, usando StandardScaler padrão")
-        return StandardScaler()
 
-@st.cache_resource
-def carregar_modelo_brfss():
-    """Carrega modelo treinado no BRFSS"""
-    # Vamos treinar esse se não existir
-    try:
-        with open('modelo_comportamental.pkl', 'rb') as f:
-            modelo = pickle.load(f)
-        return modelo
-    except:
-        # Fallback
-        modelo = xgb.XGBClassifier(
-            n_estimators=100,
-            max_depth=4,
-            learning_rate=0.1,
-            random_state=42,
-            eval_metric='logloss'
-        )
-        return modelo
+def prever_probabilidade(modelo, meta, linha):
+    """Probabilidade de diabetes para um dict {feature: valor}"""
+    x = np.array([linha[f] for f in meta['features']], dtype=float)
+    if meta['tipo'] == 'xgboost':
+        nomes = meta['features'] if modelo.feature_names else None
+        return float(modelo.predict(xgb.DMatrix(x[None, :], feature_names=nomes))[0])
+
+    # Random Forest exportado por otimizar_modelo_clinico.py: mesma sequência do pipeline de treino
+    for i, f in enumerate(meta['features']):
+        if f in meta['zero_e_ausente'] and x[i] == 0:
+            x[i] = np.nan  # no dataset Pima, zero nesses exames significa "não medido"
+    x = np.where(np.isnan(x), meta['imputer_medianas'], x)
+    # O scikit-learn arredonda a entrada para float32 e compara com os limites em float64
+    z = ((x - meta['scaler_media']) / meta['scaler_escala']).astype(np.float32).astype(np.float64)
+    total = 0.0
+    for a in modelo:
+        no = 0
+        while a['esquerda'][no] != -1:
+            no = a['esquerda'][no] if z[a['variavel'][no]] <= a['limite'][no] else a['direita'][no]
+        total += a['prob'][no]
+    return float(total / len(modelo))
 
 # Inicializar session_state
 if 'resultado_mostrado' not in st.session_state:
@@ -389,67 +491,150 @@ if 'perfil_preenchido' not in st.session_state:
 # VERIFICAÇÃO DE AUTENTICAÇÃO
 # ============================================================================
 
+auth.restaurar_sessao()
+auth.sincronizar_cookie()
+
 if not auth.is_logged_in():
-    # Container centralizado
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Container centralizado melhorado
+    # ~430px de largura dentro do block-container de 1150px
+    col1, col2, col3 = st.columns([1, 1.2, 1])
 
     with col2:
-        st.markdown('<div class="main-header">Sistema de Predição de Diabetes</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sub-header">Faça login ou cadastre-se para começar</div>', unsafe_allow_html=True)
-        st.markdown("---")
+        # Logo/Ícone
+        st.markdown("""
+            <div class="logo-icon">
+                ⚕️
+            </div>
+        """, unsafe_allow_html=True)
 
+        # Cabeçalho
+        st.markdown('<div class="main-header">Sistema de Predição de Diabetes</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-header">Análise inteligente de risco com IA</div>', unsafe_allow_html=True)
+
+
+        # Tabs de Login/Cadastro
         tab1, tab2 = st.tabs(["Login", "Cadastrar"])
 
-    with tab1:
-        st.markdown("### Fazer Login")
-        with st.form("login_form"):
-            email_login = st.text_input("Email", key="email_login", placeholder="seu@email.com")
-            senha_login = st.text_input("Senha", type="password", key="senha_login")
-            submit_login = st.form_submit_button("Entrar", use_container_width=True, type="primary")
+        with tab1:
+            with st.form("login_form"):
+                st.markdown("#### Acesse sua conta")
+                st.text_input("Email", key="email_login", placeholder="seu@email.com")
+                st.text_input("Senha", type="password", key="senha_login", placeholder="Sua senha")
 
-            if submit_login:
-                if not email_login or not senha_login:
-                    st.error("Por favor, preencha email e senha")
+                submit_login = st.form_submit_button("ENTRAR", width="stretch", type="primary")
+
+                if submit_login:
+                    email_login = st.session_state.email_login
+                    senha_login = st.session_state.senha_login
+
+                    if not email_login or not senha_login:
+                        st.error("Por favor, preencha email e senha")
+                    else:
+                        with st.spinner("Fazendo login..."):
+                            sucesso, mensagem = auth.login(email_login, senha_login)
+                            if sucesso:
+                                st.success(mensagem)
+                                auth.carregar_perfil()
+                                st.rerun()
+                            else:
+                                st.error(mensagem)
+
+            with st.expander("Esqueci minha senha"):
+                if 'reset_email' not in st.session_state:
+                    with st.form("reset_solicitar_form"):
+                        st.text_input("Email da conta", key="reset_email_input", placeholder="seu@email.com")
+                        enviar_codigo = st.form_submit_button("ENVIAR CÓDIGO", width="stretch", type="primary")
+
+                        if enviar_codigo:
+                            email_reset = st.session_state.reset_email_input.strip()
+                            if not email_reset:
+                                st.error("Informe o email da conta")
+                            else:
+                                with st.spinner("Enviando código..."):
+                                    sucesso, mensagem = auth.solicitar_reset_senha(email_reset)
+                                if sucesso:
+                                    st.session_state.reset_email = email_reset
+                                    st.rerun()
+                                else:
+                                    st.error(mensagem)
                 else:
-                    with st.spinner("Fazendo login..."):
-                        sucesso, mensagem = auth.login(email_login, senha_login)
-                        if sucesso:
-                            st.success(mensagem)
-                            auth.carregar_perfil()
-                            st.rerun()
-                        else:
-                            st.error(mensagem)
+                    st.info(f"Se {st.session_state.reset_email} estiver cadastrado, você receberá um código por email.")
+                    with st.form("reset_confirmar_form"):
+                        st.text_input("Código recebido", key="reset_codigo", max_chars=10, placeholder="Código do email")
+                        st.text_input("Nova senha", type="password", key="reset_nova_senha", placeholder="Mínimo 6 caracteres")
+                        st.text_input("Confirmar nova senha", type="password", key="reset_confirma_senha", placeholder="Repita a senha")
+                        redefinir = st.form_submit_button("REDEFINIR SENHA", width="stretch", type="primary")
 
-    with tab2:
-        st.markdown("### Criar Nova Conta")
-        with st.form("signup_form"):
-            nome_cadastro = st.text_input("Nome Completo", key="nome_cadastro", placeholder="João Silva")
-            email_cadastro = st.text_input("Email", key="email_cadastro", placeholder="seu@email.com")
-            senha_cadastro = st.text_input("Senha", type="password", key="senha_cadastro", help="Mínimo 6 caracteres")
-            senha_confirma = st.text_input("Confirmar Senha", type="password", key="senha_confirma")
-            submit_cadastro = st.form_submit_button("Cadastrar", use_container_width=True, type="primary")
+                        if redefinir:
+                            codigo = st.session_state.reset_codigo.strip()
+                            nova_senha = st.session_state.reset_nova_senha
+                            if not codigo or not nova_senha:
+                                st.error("Preencha o código e a nova senha")
+                            elif nova_senha != st.session_state.reset_confirma_senha:
+                                st.error("As senhas não coincidem")
+                            elif len(nova_senha) < 6:
+                                st.error("Senha deve ter no mínimo 6 caracteres")
+                            else:
+                                with st.spinner("Redefinindo senha..."):
+                                    sucesso, mensagem = auth.redefinir_senha(st.session_state.reset_email, codigo, nova_senha)
+                                if sucesso:
+                                    del st.session_state.reset_email
+                                    auth.carregar_perfil()
+                                    st.rerun()
+                                else:
+                                    st.error(mensagem)
 
-            if submit_cadastro:
-                if not email_cadastro or not senha_cadastro or not nome_cadastro:
-                    st.error("Por favor, preencha todos os campos")
-                elif senha_cadastro != senha_confirma:
-                    st.error("As senhas não coincidem")
-                elif len(senha_cadastro) < 6:
-                    st.error("Senha deve ter no mínimo 6 caracteres")
-                else:
-                    with st.spinner("Criando conta..."):
-                        sucesso, mensagem = auth.signup(email_cadastro, senha_cadastro, nome_cadastro)
-                        if sucesso:
-                            st.success(mensagem)
-                            st.rerun()
-                        else:
-                            st.error(mensagem)
+                    if st.button("Usar outro email / reenviar código", width="stretch"):
+                        del st.session_state.reset_email
+                        st.rerun()
 
-        st.markdown("---")
+        with tab2:
+            with st.form("signup_form"):
+                st.markdown("#### Crie sua conta gratuitamente")
+                st.text_input("Nome Completo", key="nome_cadastro", placeholder="Seu nome completo")
+                st.text_input("Email", key="email_cadastro", placeholder="seu@email.com")
+
+                col_s1, col_s2 = st.columns(2)
+                with col_s1:
+                    st.text_input("Senha", type="password", key="senha_cadastro",
+                                help="Mínimo 6 caracteres", placeholder="Sua senha")
+                with col_s2:
+                    st.text_input("Confirmar Senha", type="password", key="senha_confirma",
+                                placeholder="Repita a senha")
+
+                submit_cadastro = st.form_submit_button("CRIAR CONTA", width="stretch", type="primary")
+
+                if submit_cadastro:
+                    nome_cadastro = st.session_state.nome_cadastro
+                    email_cadastro = st.session_state.email_cadastro
+                    senha_cadastro = st.session_state.senha_cadastro
+                    senha_confirma = st.session_state.senha_confirma
+
+                    if not email_cadastro or not senha_cadastro or not nome_cadastro:
+                        st.error("Por favor, preencha todos os campos")
+                    elif senha_cadastro != senha_confirma:
+                        st.error("As senhas não coincidem")
+                    elif len(senha_cadastro) < 6:
+                        st.error("Senha deve ter no mínimo 6 caracteres")
+                    else:
+                        with st.spinner("Criando conta..."):
+                            sucesso, mensagem = auth.signup(email_cadastro, senha_cadastro, nome_cadastro)
+                            if sucesso:
+                                st.success(mensagem)
+                                st.rerun()
+                            else:
+                                st.error(mensagem)
+
+
+        # Footer
         st.markdown("""
-            <div style='text-align: center; padding: 20px;'>
-                <p><strong>TCC: Agente de IA para Estimativa de Risco de Diabetes Tipo 2</strong></p>
-                <p>Autor: David Reis | 2026</p>
+            <div class="auth-footer">
+                <p style='font-size: 12px; color: var(--muted);'>
+                    Desenvolvido por <strong style='color: var(--accent);'>David Reis</strong> | 2026
+                </p>
+                <p style='font-size: 11px; color: var(--muted); margin-top: 8px;'>
+                    Validação cross-cultural Brasil e USA
+                </p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -470,7 +655,7 @@ else:
 
 st.sidebar.success(f"**{nome_exibir}**")
 
-if st.sidebar.button("Sair", use_container_width=True):
+if st.sidebar.button("Sair", width="stretch"):
     auth.logout()
     st.rerun()
 
@@ -484,17 +669,16 @@ pagina = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
-### Sobre o TCC
+### Sobre o sistema
 **Autor:** David Reis
-**Tema:** Agente de IA para Estimativa de Risco
 
 **Datasets:**
 - Pima Indians (clínico)
 - BRFSS 2015 (comportamental)
 
 **Modelos:**
-- XGBoost + Feature Engineering
-- SHAP Explicabilidade
+- Random Forest (clínico)
+- XGBoost (comportamental)
 """)
 
 # ============================================================================
@@ -503,7 +687,7 @@ st.sidebar.markdown("""
 
 if pagina == "Início":
     st.markdown('<div class="main-header">Sistema de Predição de Diabetes</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">TCC: Agente de IA para Estimativa de Risco de Diabetes Tipo 2</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Análise inteligente de risco de diabetes tipo 2 com IA</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -513,7 +697,7 @@ if pagina == "Início":
         st.markdown("""
         <div class="metric-box">
             <h3>Modelo Clínico</h3>
-            <p><strong>F1-Score: 0.72</strong></p>
+            <p><strong>F1-Score: 0.69</strong></p>
             <p>Dataset: Pima Indians<br>
             Features: Exames laboratoriais<br>
             <strong>Melhor precisão</strong></p>
@@ -524,7 +708,7 @@ if pagina == "Início":
         st.markdown("""
         <div class="metric-box">
             <h3>Modelo Comportamental</h3>
-            <p><strong>F1-Score: 0.47</strong></p>
+            <p><strong>F1-Score: 0.46</strong></p>
             <p>Dataset: BRFSS (253k registros)<br>
             Features: Hábitos de vida<br>
             <strong>Triagem inicial</strong></p>
@@ -535,7 +719,7 @@ if pagina == "Início":
         st.markdown("""
         <div class="metric-box">
             <h3>Descoberta</h3>
-            <p><strong>Clínico +53% melhor!</strong></p>
+            <p><strong>Clínico +51% melhor!</strong></p>
             <p>Features clínicas são superiores<br>
             Qualidade > Quantidade<br>
             <strong>768 vs 253k registros</strong></p>
@@ -581,7 +765,7 @@ elif pagina == "Meu Perfil":
     medicacoes = st.text_area("Medicações Atuais", value=st.session_state.perfil_medicacoes,
                               placeholder="Ex: Metformina 500mg...")
     
-    if st.button("Salvar Perfil", type="primary", use_container_width=True):
+    if st.button("Salvar Perfil", type="primary", width="stretch"):
         st.session_state.perfil_nome = nome
         st.session_state.perfil_idade = idade
         st.session_state.perfil_sexo = sexo
@@ -613,77 +797,63 @@ elif pagina == "Modelo Clínico":
     
     st.info("**Preencha os dados dos exames laboratoriais abaixo:**")
     
-    col1, col2 = st.columns(2)
-    
+    col1, col2, col3, col4 = st.columns(4)
+
     with col1:
-        pregnancies = st.number_input("Número de Gestações", min_value=0, max_value=20, value=0)
-        glucose = st.number_input("Glicemia (mg/dL)", min_value=0, max_value=250, value=120)
-        blood_pressure = st.number_input("Pressão Arterial (mm Hg)", min_value=0, max_value=150, value=80)
-        skin_thickness = st.number_input("Espessura da Pele (mm)", min_value=0, max_value=100, value=20)
-    
+        glucose = st.number_input("Glicemia TOTG 2h (mg/dL)", min_value=0, max_value=250, value=120,
+                                  help="Glicemia 2 horas após ingerir glicose (teste oral de tolerância à glicose). "
+                                       "Não é a glicemia de jejum.")
+        insulin = st.number_input("Insulina Sérica (µU/ml)", min_value=0, max_value=900, value=80,
+                                  help="Deixe 0 se não tiver esse exame.")
+
     with col2:
-        insulin = st.number_input("Insulina Sérica (µU/ml)", min_value=0, max_value=900, value=80)
-        bmi = st.number_input("IMC", min_value=10.0, max_value=70.0, 
+        blood_pressure = st.number_input("Pressão Diastólica (mm Hg)", min_value=0, max_value=150, value=80,
+                                         help="O número de baixo da pressão. Ex.: em 120/80, informe 80.")
+        skin_thickness = st.number_input("Espessura da Pele (mm)", min_value=0, max_value=100, value=20,
+                                         help="Dobra cutânea do tríceps. Deixe 0 se não tiver essa medida.")
+
+    with col3:
+        bmi = st.number_input("IMC", min_value=10.0, max_value=70.0,
                              value=st.session_state.perfil_imc if st.session_state.perfil_imc > 0 else 25.0, step=0.1)
+        age = st.number_input("Idade (anos)", min_value=18, max_value=120,
+                             value=max(18, int(st.session_state.perfil_idade)))
+
+    with col4:
+        pregnancies = st.number_input("Número de Gestações", min_value=0, max_value=20, value=0)
         diabetes_pedigree = st.number_input("Função Pedigree de Diabetes", min_value=0.0, max_value=3.0, value=0.5, step=0.01)
-        age = st.number_input("Idade (anos)", min_value=18, max_value=120, 
-                             value=st.session_state.perfil_idade if st.session_state.perfil_idade > 0 else 33)
     
-    if st.button("Analisar Risco", key="btn_clinico", type="primary", use_container_width=True):
-        # PREDIÇÃO REAL com modelo treinado
+    if st.button("Analisar Risco", key="btn_clinico", type="primary", width="stretch"):
         try:
-            # Carregar modelo e scaler
-            modelo = carregar_modelo_pima()
-            scaler = carregar_scaler()
+            modelo, meta_clinico = carregar_modelo('modelo_clinico')
 
-            # Preparar features (incluindo feature engineering)
-            glucose_bmi = glucose * bmi
-            age_glucose = age * glucose
-
-            # Criar array com todas as features
-            features = np.array([[
-                pregnancies, glucose, blood_pressure, skin_thickness,
-                insulin, bmi, diabetes_pedigree, age,
-                glucose_bmi, age_glucose, bmi**2, glucose**2,
-                insulin * bmi, age * bmi, glucose / bmi if bmi > 0 else 0,
-                insulin / glucose if glucose > 0 else 0
-            ]])
-
-            # Normalizar
-            features_scaled = scaler.transform(features)
-
-            # PREDIÇÃO REAL
-            probabilidade = modelo.predict_proba(features_scaled)[0][1]
-            predicao = 1 if probabilidade > 0.35 else 0  # Threshold otimizado
-
-            st.success("✓ Predição feita com MODELO TREINADO REAL!")
+            probabilidade = prever_probabilidade(modelo, meta_clinico, {
+                'Pregnancies': pregnancies,
+                'Glucose': glucose,
+                'BloodPressure': blood_pressure,
+                'SkinThickness': skin_thickness,
+                'Insulin': insulin,
+                'BMI': bmi,
+                'DiabetesPedigreeFunction': diabetes_pedigree,
+                'Age': age,
+            })
+            predicao = 1 if probabilidade >= meta_clinico['threshold'] else 0
 
         except Exception as e:
-            st.warning(f"Usando modo fallback: {e}")
-            # Fallback para lógica simples
-            score = 0
-            if glucose > 140: score += 0.4
-            elif glucose > 120: score += 0.2
-            if bmi > 30: score += 0.3
-            elif bmi > 25: score += 0.15
-            if insulin > 200: score += 0.2
-            if diabetes_pedigree > 0.7: score += 0.2
-            if age > 45: score += 0.15
-
-            probabilidade = min(score, 0.95)
-            predicao = 1 if probabilidade > 0.35 else 0
+            st.error(f"Não foi possível executar o modelo clínico: {e}")
+            st.stop()
         
         # Salvar no banco
         try:
             supabase_db.salvar_predicao(
                 user_id=auth.get_user_id(),
                 tipo_modelo='clinico',
-                probabilidade=probabilidade,
-                resultado=predicao,
-                features={
+                probabilidade=float(probabilidade),
+                resultado=int(predicao),
+                dados_input={
                     'glucose': glucose, 'bmi': bmi, 'age': age,
                     'insulin': insulin, 'blood_pressure': blood_pressure
-                }
+                },
+                session_id=st.session_state.session_id,
             )
         except Exception as e:
             print(f"Erro ao salvar: {e}")
@@ -695,7 +865,7 @@ elif pagina == "Modelo Clínico":
             st.markdown(f"""
             <div class="result-high">
                 <h3>RISCO ELEVADO DE DIABETES</h3>
-                <p style='font-size: 24px;'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
+                <p class='prob'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
                 <p>Baseado nos exames, o modelo identifica risco elevado.</p>
                 <p><strong>Recomendações:</strong></p>
                 <ul>
@@ -709,7 +879,7 @@ elif pagina == "Modelo Clínico":
             st.markdown(f"""
             <div class="result-low">
                 <h3>RISCO BAIXO DE DIABETES</h3>
-                <p style='font-size: 24px;'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
+                <p class='prob'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
                 <p>Baseado nos exames, o modelo não identifica risco elevado.</p>
                 <p><strong>Recomendações:</strong></p>
                 <ul>
@@ -720,46 +890,10 @@ elif pagina == "Modelo Clínico":
             </div>
             """, unsafe_allow_html=True)
         
-        # Gauge visual
-        try:
-            gauge_path = criar_gauge_risco(probabilidade)
-            st.markdown("### Medidor de Risco Visual")
-            st.image(gauge_path, use_column_width=True)
-        except Exception as e:
-            st.warning(f"Gauge indisponível: {e}")
-
-        # SHAP Explicabilidade
-        st.markdown("---")
-        st.markdown("### Explicação da Predição (SHAP)")
-
-        try:
-            # Criar DataFrame com features
-            import os
-            dados_shap = {
-                'Pregnancies': [pregnancies],
-                'Glucose': [glucose],
-                'BloodPressure': [blood_pressure],
-                'SkinThickness': [skin_thickness],
-                'Insulin': [insulin],
-                'BMI': [bmi],
-                'DiabetesPedigreeFunction': [diabetes_pedigree],
-                'Age': [age],
-                'Glucose_BMI': [glucose * bmi],
-                'Age_Glucose': [age * glucose]
-            }
-
-            df_shap = pd.DataFrame(dados_shap)
-
-            # Gráfico SHAP DESABILITADO (economizar RAM no Streamlit Cloud Free)
-            # shap_path = criar_grafico_barras_shap(df_shap, carregar_modelo_pima())
-            # if os.path.exists(shap_path):
-            #     st.image(shap_path, use_column_width=True)
-            #     st.info("O gráfico SHAP mostra quais fatores mais influenciaram sua predição.")
-
-            st.info("📊 Gráficos SHAP temporariamente desabilitados para otimização de recursos.")
-
-        except Exception as e:
-            st.info(f"Explicação SHAP indisponível nesta versão: {e}")
+        st.markdown("### Medidor de Risco Visual")
+        _, col_gauge, _ = st.columns([1, 2, 1])
+        with col_gauge:
+            st.image(criar_gauge_risco(probabilidade, threshold=meta_clinico['threshold']), width="stretch")
 
         # Fatores de Risco Detalhados
         st.markdown("---")
@@ -769,16 +903,17 @@ elif pagina == "Modelo Clínico":
 
         with col1:
             st.markdown("**Principais Contribuições:**")
-            if glucose > 140:
-                st.error(f"Glicemia ALTA ({glucose} mg/dL) - Risco significativo!")
-            elif glucose > 120:
-                st.warning(f"Glicemia borderline ({glucose} mg/dL) - Monitorar")
+            # Limites do TOTG 2h: < 140 normal, 140-199 tolerância diminuída, >= 200 faixa de diabetes
+            if glucose >= 200:
+                st.error(f"Glicemia na faixa de diabetes ({glucose} mg/dL no TOTG)")
+            elif glucose >= 140:
+                st.warning(f"Tolerância à glicose diminuída ({glucose} mg/dL no TOTG)")
             else:
-                st.success(f"Glicemia normal ({glucose} mg/dL)")
+                st.success(f"Glicemia normal ({glucose} mg/dL no TOTG)")
 
-            if bmi > 30:
+            if bmi >= 30:
                 st.error(f"Obesidade (IMC {bmi:.1f}) - Fator de risco #1")
-            elif bmi > 25:
+            elif bmi >= 25:
                 st.warning(f"Sobrepeso (IMC {bmi:.1f})")
             else:
                 st.success(f"Peso adequado (IMC {bmi:.1f})")
@@ -806,38 +941,40 @@ elif pagina == "Modelo Clínico":
         if predicao == 1:
             st.markdown("**URGENTE - Alto Risco:**")
 
-            if glucose > 140:
-                recomendacoes.append("**GLICEMIA ALTA:** Consulte endocrinologista ESTA SEMANA - pode ser pré-diabetes ou diabetes")
-            elif glucose > 120:
-                recomendacoes.append("**Glicemia Borderline:** Repita exame + HbA1c - você está em pré-diabetes")
+            if glucose >= 200:
+                recomendacoes.append("**Glicemia na faixa de diabetes:** Procure um endocrinologista o quanto antes para confirmar o diagnóstico")
+            elif glucose >= 140:
+                recomendacoes.append("**Tolerância à glicose diminuída:** Repita o exame e peça HbA1c ao seu médico")
 
             if insulin > 200:
-                recomendacoes.append("**Resistência Insulínica:** Avalie com endocrinologista + considere Metformina")
+                recomendacoes.append("**Insulina elevada:** Pode indicar resistência à insulina - avalie com um endocrinologista")
 
-            if bmi > 30:
-                recomendacoes.append("**OBESIDADE:** Perder 5-10% do peso reduz risco em 58% - consulte nutricionista")
-            elif bmi > 25:
+            if bmi >= 30:
+                recomendacoes.append("**Obesidade:** Perder 5-10% do peso reduz risco em 58% - consulte nutricionista")
+            elif bmi >= 25:
                 recomendacoes.append("**Sobrepeso:** Objetivo IMC < 25 - dieta + exercícios")
 
             if st.session_state.perfil_hist_familiar == "Sim":
-                recomendacoes.append("**Risco Genético Alto:** Com histórico familiar + exames alterados, monitoramento a cada 2 meses")
+                recomendacoes.append("**Histórico familiar:** Com exames alterados, faça acompanhamento médico mais frequente")
 
-            if blood_pressure > 140:
-                recomendacoes.append("**Pressão Alta:** Diabetes + hipertensão = risco cardiovascular dobrado")
+            if blood_pressure >= 90:
+                recomendacoes.append("**Pressão diastólica alta:** Diabetes + hipertensão aumentam o risco cardiovascular")
 
             recomendacoes.append("**Protocolo Completo:** Glicemia jejum + HbA1c + Curva glicêmica + Insulina + Peptídeo C")
             recomendacoes.append("**Exercício Obrigatório:** 30 min/dia de caminhada MELHORA sensibilidade à insulina")
 
         else:
-            st.markdown("**Exames Normais - Mantenha a Vigilância:**")
+            st.markdown("**Risco Baixo - Mantenha a Vigilância:**")
 
-            if glucose > 100:
-                recomendacoes.append("**Glicemia no limite:** Reduza açúcar e carboidratos refinados AGORA")
+            if glucose >= 140:
+                recomendacoes.append("**Glicemia acima do normal no TOTG:** Reduza açúcar e carboidratos refinados e repita o exame")
 
             if insulin > 150:
                 recomendacoes.append("**Insulina moderada:** Evite resistência insulínica com exercício")
 
-            if bmi > 23:
+            if bmi >= 25:
+                recomendacoes.append("**Sobrepeso:** Objetivo IMC < 25 - dieta + exercícios")
+            elif bmi > 23:
                 recomendacoes.append("**Peso no limite:** IMC saudável mas perto do sobrepeso - não ganhe mais peso")
             else:
                 recomendacoes.append("**Peso ideal:** Continue assim! Peso saudável é sua melhor proteção")
@@ -857,7 +994,7 @@ elif pagina == "Modelo Clínico":
         if st.session_state.perfil_alergias:
             st.warning(f"**ATENÇÃO - Alergias:** {st.session_state.perfil_alergias}\n\nInforme ao médico antes de QUALQUER medicação!")
 
-        if predicao == 0 and glucose < 100 and bmi < 25:
+        if predicao == 0 and glucose < 140 and bmi < 25:
             st.success("**Parabéns!** Seus exames estão ótimos. Continue com hábitos saudáveis!")
 
         # Geração de PDF
@@ -866,13 +1003,24 @@ elif pagina == "Modelo Clínico":
 
         try:
             pdf_path = gerar_relatorio_predicao(
-                tipo_modelo='clinico',
-                probabilidade=probabilidade,
-                resultado=predicao,
-                features=dados_shap,
+                nome_arquivo=os.path.join(tempfile.gettempdir(), f"relatorio_{uuid.uuid4().hex}.pdf"),
                 nome_paciente=st.session_state.perfil_nome or "Paciente",
-                idade=age,
-                sexo=st.session_state.perfil_sexo
+                tipo_modelo="Clínico",
+                resultado=predicao,
+                probabilidade=probabilidade,
+                dados_paciente={
+                    'Idade': age,
+                    'Sexo': st.session_state.perfil_sexo,
+                    'Glicemia (mg/dL)': glucose,
+                    'Insulina (µU/ml)': insulin,
+                    'Pressão Arterial (mm Hg)': blood_pressure,
+                    'Espessura da Pele (mm)': skin_thickness,
+                    'IMC': bmi,
+                    'Gestações': pregnancies,
+                    'Função Pedigree': diabetes_pedigree,
+                },
+                # reportlab usa <b>, não markdown
+                recomendacoes=[re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", r) for r in recomendacoes],
             )
 
             with open(pdf_path, 'rb') as f:
@@ -881,7 +1029,7 @@ elif pagina == "Modelo Clínico":
                     data=f,
                     file_name=f"relatorio_diabetes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                     mime="application/pdf",
-                    use_container_width=True
+                    width="stretch"
                 )
 
             st.success("Relatório gerado! Leve ao seu médico.")
@@ -900,43 +1048,59 @@ elif pagina == "Modelo Comportamental":
     
     st.info("**Preencha o questionário sobre seus hábitos:**")
     
-    col1, col2 = st.columns(2)
-    
+    opcoes_saude = ["Excelente", "Muito boa", "Boa", "Razoável", "Ruim"]
+    col1, col2, col3, col4 = st.columns(4)
+
     with col1:
-        st.markdown("#### Histórico de Saúde")
+        idade_brfss = st.number_input("Idade (anos)", min_value=18, max_value=120,
+                                      value=int(st.session_state.perfil_idade) if st.session_state.perfil_idade >= 18 else 30)
+        sexo_brfss = st.selectbox("Sexo", ["Masculino", "Feminino"],
+                                  index=0 if st.session_state.perfil_sexo == "Masculino" else 1)
+
+    with col2:
+        bmi_brfss = st.number_input("IMC", min_value=10.0, max_value=70.0,
+                                    value=st.session_state.perfil_imc if st.session_state.perfil_imc > 0 else 25.0)
+        gen_health = st.selectbox("Saúde geral?", opcoes_saude, index=2)
+
+    with col3:
         high_bp = st.selectbox("Pressão alta?", ["Não", "Sim"])
         high_chol = st.selectbox("Colesterol alto?", ["Não", "Sim"])
-        bmi_brfss = st.number_input("IMC", min_value=10.0, max_value=70.0, 
-                                    value=st.session_state.perfil_imc if st.session_state.perfil_imc > 0 else 25.0)
-    
-    with col2:
-        st.markdown("#### Hábitos de Vida")
+
+    with col4:
         phys_activity = st.selectbox("Pratica atividade física?", ["Não", "Sim"])
         smoker = st.selectbox("Fumante?", ["Não", "Sim"])
-        gen_health = st.select_slider("Saúde geral?", options=["Excelente", "Muito boa", "Boa", "Razoável", "Ruim"])
-    
-    if st.button("Analisar Risco", key="btn_comportamental", type="primary", use_container_width=True):
-        # Cálculo de risco
-        score = 0
-        if high_bp == "Sim": score += 0.2
-        if high_chol == "Sim": score += 0.2
-        if bmi_brfss > 30: score += 0.25
-        elif bmi_brfss > 25: score += 0.15
-        if gen_health in ["Razoável", "Ruim"]: score += 0.2
-        if phys_activity == "Não": score += 0.1
-        if smoker == "Sim": score += 0.1
-        
-        probabilidade = min(score, 0.90)
-        predicao = 1 if probabilidade > 0.24 else 0
+
+    if st.button("Analisar Risco", key="btn_comportamental", type="primary", width="stretch"):
+        modelo_comp, meta_comp = carregar_modelo('modelo_comportamental')
+        # BRFSS codifica idade em faixas: 1 = 18-24, 2 = 25-29, ..., 13 = 80+
+        faixa_idade = 1 if idade_brfss < 25 else min(13, (idade_brfss - 25) // 5 + 2)
+        entrada = {
+            'HighBP': int(high_bp == "Sim"),
+            'HighChol': int(high_chol == "Sim"),
+            'BMI': bmi_brfss,
+            'Smoker': int(smoker == "Sim"),
+            'PhysActivity': int(phys_activity == "Sim"),
+            'GenHlth': opcoes_saude.index(gen_health) + 1,
+            'Age': faixa_idade,
+            'Sex': int(sexo_brfss == "Masculino"),
+        }
+
+        probabilidade = prever_probabilidade(modelo_comp, meta_comp, entrada)
+        predicao = 1 if probabilidade >= meta_comp['threshold'] else 0
         
         # Salvar
         try:
             supabase_db.salvar_predicao(
                 user_id=auth.get_user_id(),
                 tipo_modelo='comportamental',
-                probabilidade=probabilidade,
-                resultado=predicao,
-                features={'bmi': bmi_brfss, 'high_bp': high_bp, 'high_chol': high_chol}
+                probabilidade=float(probabilidade),
+                resultado=int(predicao),
+                dados_input={
+                    'age': idade_brfss, 'sex': sexo_brfss, 'bmi': bmi_brfss, 'gen_health': gen_health,
+                    'high_bp': high_bp, 'high_chol': high_chol,
+                    'phys_activity': phys_activity, 'smoker': smoker,
+                },
+                session_id=st.session_state.session_id,
             )
         except Exception as e:
             print(f"Erro: {e}")
@@ -948,7 +1112,7 @@ elif pagina == "Modelo Comportamental":
             st.markdown(f"""
             <div class="result-high">
                 <h3>RISCO ELEVADO</h3>
-                <p style='font-size: 24px;'><strong>{probabilidade*100:.1f}%</strong></p>
+                <p class='prob'><strong>{probabilidade*100:.1f}%</strong></p>
                 <p>Baseado nos hábitos, risco elevado identificado.</p>
                 <ul>
                     <li>Procure médico para exames</li>
@@ -961,7 +1125,7 @@ elif pagina == "Modelo Comportamental":
             st.markdown(f"""
             <div class="result-low">
                 <h3>RISCO BAIXO</h3>
-                <p style='font-size: 24px;'><strong>{probabilidade*100:.1f}%</strong></p>
+                <p class='prob'><strong>{probabilidade*100:.1f}%</strong></p>
                 <p>Baseado nos hábitos, risco baixo.</p>
                 <ul>
                     <li>Mantenha bons hábitos!</li>
@@ -971,13 +1135,10 @@ elif pagina == "Modelo Comportamental":
             </div>
             """, unsafe_allow_html=True)
 
-        # Gauge visual
-        try:
-            gauge_path = criar_gauge_risco(probabilidade)
-            st.markdown("### Medidor de Risco Visual")
-            st.image(gauge_path, use_column_width=True)
-        except Exception as e:
-            pass
+        st.markdown("### Medidor de Risco Visual")
+        _, col_gauge, _ = st.columns([1, 2, 1])
+        with col_gauge:
+            st.image(criar_gauge_risco(probabilidade, threshold=meta_comp['threshold']), width="stretch")
 
         # Fatores de Risco
         st.markdown("---")
@@ -1023,9 +1184,9 @@ elif pagina == "Comparação":
         <div class="metric-box">
             <h3>Modelo Clínico</h3>
             <p><strong>Dataset:</strong> Pima Indians (768 registros)</p>
-            <p><strong>F1-Score:</strong> 0.72</p>
-            <p><strong>Precisão:</strong> 63.4%</p>
-            <p><strong>Recall:</strong> 83.3%</p>
+            <p><strong>F1-Score:</strong> 0.69</p>
+            <p><strong>Precisão:</strong> 59.9%</p>
+            <p><strong>Recall:</strong> 82.2%</p>
             <hr>
             <p><strong>Vantagens:</strong></p>
             <ul>
@@ -1044,9 +1205,9 @@ elif pagina == "Comparação":
         <div class="metric-box">
             <h3>Modelo Comportamental</h3>
             <p><strong>Dataset:</strong> BRFSS (253k registros)</p>
-            <p><strong>F1-Score:</strong> 0.47</p>
-            <p><strong>Precisão:</strong> 37.1%</p>
-            <p><strong>Recall:</strong> 63.8%</p>
+            <p><strong>F1-Score:</strong> 0.46</p>
+            <p><strong>Precisão:</strong> 36.7%</p>
+            <p><strong>Recall:</strong> 61.1%</p>
             <hr>
             <p><strong>Vantagens:</strong></p>
             <ul>
@@ -1119,7 +1280,7 @@ elif pagina == "Histórico & Estatísticas":
         
         if dados_tabela:
             df = pd.DataFrame(dados_tabela)
-            st.dataframe(df, use_column_width=True, hide_index=True)
+            st.dataframe(df, width="stretch", hide_index=True)
         
         # Análise Temporal
         if len(predicoes_usuario) >= 2:
@@ -1149,14 +1310,14 @@ elif pagina == "Histórico & Estatísticas":
                 # Gráficos de evolução
                 try:
                     img_evolucao = criar_grafico_evolucao(predicoes_usuario)
-                    st.image(img_evolucao, use_column_width=True)
+                    st.image(img_evolucao, width="stretch")
                 except Exception as e:
                     st.warning(f"Gráfico de evolução: {e}")
 
                 try:
                     img_progresso = criar_grafico_progresso(predicoes_usuario)
                     st.markdown("### Comparação: Antes vs Agora")
-                    st.image(img_progresso, use_column_width=True)
+                    st.image(img_progresso, width="stretch")
                 except Exception as e:
                     st.warning(f"Gráfico de progresso: {e}")
 
@@ -1171,7 +1332,7 @@ elif pagina == "Histórico & Estatísticas":
             probs = [p['probabilidade'] * 100 for p in predicoes_usuario]
 
             fig, ax = plt.subplots(figsize=(10, 4))
-            ax.hist(probs, bins=20, color='#00d4ff', alpha=0.7, edgecolor='black')
+            ax.hist(probs, bins=20, color='#4fb9c4', alpha=0.7, edgecolor='black')
             ax.set_xlabel('Probabilidade de Diabetes (%)', fontsize=12)
             ax.set_ylabel('Frequência', fontsize=12)
             ax.set_title('Distribuição das Suas Predições', fontsize=14, fontweight='bold')
@@ -1230,7 +1391,6 @@ elif pagina == "Histórico & Estatísticas":
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; padding: 20px;'>
-    <p><strong>TCC: Agente de IA para Estimativa de Risco de Diabetes Tipo 2</strong></p>
     <p>Autor: David Reis | 2026</p>
     <p><em>Este sistema é para fins educacionais e não substitui consulta médica.</em></p>
 </div>

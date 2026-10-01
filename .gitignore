@@ -55,6 +55,9 @@ Thumbs.db
 !modelo_melhorado_clinico.pkl
 !scaler_melhorado.pkl
 *.joblib
+
+# Dados brutos do NHANES (baixados por baixar_nhanes.py)
+dados_nhanes/*.xpt
 *.h5
 *.model
 

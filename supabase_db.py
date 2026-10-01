@@ -18,28 +18,29 @@ class SupabaseDB:
     """Classe para gerenciar operações com Supabase"""
 
     def __init__(self):
-        """Inicializa conexão com Supabase"""
         self.url = os.getenv('SUPABASE_URL')
         self.key = os.getenv('SUPABASE_KEY')
-        self.client: Optional[Client] = None
-        self.conectado = False
+        self.conectado = bool(self.url and self.key)
+        if not self.conectado:
+            print("Credenciais do Supabase não configuradas (.env)")
 
-        # Tentar conectar
-        self._conectar()
+    @property
+    def client(self) -> Optional[Client]:
+        """Cliente próprio da sessão do Streamlit.
 
-    def _conectar(self):
-        """Conecta ao Supabase"""
-        try:
-            if self.url and self.key:
-                self.client = create_client(self.url, self.key)
-                self.conectado = True
-                print("✅ Conectado ao Supabase!")
-            else:
-                print("⚠️ Credenciais do Supabase não configuradas (.env)")
-                self.conectado = False
-        except Exception as e:
-            print(f"❌ Erro ao conectar Supabase: {e}")
-            self.conectado = False
+        O cliente do Supabase guarda o login do usuário; um cliente global seria
+        compartilhado entre todos os visitantes e misturaria as sessões.
+        """
+        if not self.conectado:
+            return None
+        import streamlit as st
+        if '_supabase_client' not in st.session_state:
+            try:
+                st.session_state._supabase_client = create_client(self.url, self.key)
+            except Exception as e:
+                print(f"Erro ao conectar Supabase: {e}")
+                return None
+        return st.session_state._supabase_client
 
     def salvar_predicao(
         self,
@@ -84,7 +85,7 @@ class SupabaseDB:
             return True
 
         except Exception as e:
-            print(f"❌ Erro ao salvar predição: {e}")
+            print(f"Erro ao salvar predição: {e}")
             return False
 
     def obter_ultimas_predicoes(
@@ -128,7 +129,7 @@ class SupabaseDB:
             return predicoes
 
         except Exception as e:
-            print(f"❌ Erro ao obter predições: {e}")
+            print(f"Erro ao obter predições: {e}")
             return []
 
     def obter_estatisticas(self) -> Dict:
@@ -181,7 +182,7 @@ class SupabaseDB:
             }
 
         except Exception as e:
-            print(f"❌ Erro ao obter estatísticas: {e}")
+            print(f"Erro ao obter estatísticas: {e}")
             return {
                 'total': 0,
                 'alto_risco': 0,
@@ -220,7 +221,7 @@ class SupabaseDB:
             return por_data
 
         except Exception as e:
-            print(f"❌ Erro ao obter predições por data: {e}")
+            print(f"Erro ao obter predições por data: {e}")
             return {}
 
 # Instância global

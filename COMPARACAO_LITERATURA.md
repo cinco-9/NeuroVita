@@ -53,20 +53,21 @@ Comparar o desempenho do modelo proposto (XGBoost com Feature Engineering) com m
 - F1-Score: 0.705
 - ROC-AUC: 0.811
 
-### 📊 Comparação com Baseline (Logistic Regression)
+### 📊 Comparação com o Baseline (Logistic Regression)
 
-- Baseline F1-Score: 0.667
-- Nosso modelo: 0.705
-- **Melhoria: +5.7%**
+- Baseline: F1 0.667
+- Melhor modelo (2. Decision Tree): F1 0.705 (+5.7%)
+- XGBoost: F1 0.623, 6º de 8 modelos
 
 ---
 
 ## Conclusões
 
-1. ✅ **XGBoost superou todos os modelos clássicos**
-2. ✅ Melhoria de 5.7% sobre baseline (Logistic Regression)
-3. ✅ Validação cruzada confirma robustez (CV F1=0.612)
-4. ✅ Feature Engineering contribuiu significativamente
+1. O melhor F1 no conjunto de teste foi do **2. Decision Tree** (0.705).
+2. O XGBoost ficou em **6º lugar** (F1 0.623; CV F1 0.587).
+3. Na validação cruzada, a maior média foi do **3. Random Forest** (CV F1 0.653).
+   Com apenas 768 pacientes (154 no teste), diferenças de poucos centésimos no F1 entre modelos
+   ficam dentro da variação esperada e não indicam superioridade clara de um algoritmo.
 
 ---
 
@@ -79,4 +80,4 @@ Comparar o desempenho do modelo proposto (XGBoost com Feature Engineering) com m
 
 ---
 
-*Relatório gerado em 2026-09-23 14:11:53*
+*Relatório gerado em 2026-10-01 12:25:08*

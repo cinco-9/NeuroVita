@@ -1,0 +1,64 @@
+{
+  "tipo": "random_forest",
+  "features": [
+    "Pregnancies",
+    "Glucose",
+    "BloodPressure",
+    "SkinThickness",
+    "Insulin",
+    "BMI",
+    "DiabetesPedigreeFunction",
+    "Age"
+  ],
+  "zero_e_ausente": [
+    "Glucose",
+    "BloodPressure",
+    "SkinThickness",
+    "Insulin",
+    "BMI"
+  ],
+  "imputer_medianas": [
+    3.0,
+    117.0,
+    72.0,
+    29.0,
+    125.0,
+    32.3,
+    0.3725,
+    29.0
+  ],
+  "scaler_media": [
+    3.8450520833333335,
+    121.65625,
+    72.38671875,
+    29.108072916666668,
+    140.671875,
+    32.45520833333333,
+    0.47187630208333325,
+    33.240885416666664
+  ],
+  "scaler_escala": [
+    3.3673836124089958,
+    30.418462775166116,
+    12.088763750899638,
+    8.785495707586254,
+    86.32680240314153,
+    6.870699333517456,
+    0.3311128160286291,
+    11.752572645994181
+  ],
+  "threshold": 0.39,
+  "metricas_cv_aninhada": {
+    "f1_media": 0.6911,
+    "f1_desvio": 0.0382,
+    "precisao_media": 0.5988,
+    "recall_media": 0.8221,
+    "auc_media": 0.8387,
+    "brier_media": 0.1576
+  },
+  "hiperparametros": {
+    "imputer__add_indicator": false,
+    "modelo__max_depth": 4,
+    "modelo__min_samples_leaf": 1
+  }
+}

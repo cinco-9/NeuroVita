@@ -4,12 +4,61 @@ MÓDULO DE AUTENTICAÇÃO - SUPABASE AUTH
 Sistema de login, cadastro e gerenciamento de usuários
 """
 
+import json
 import streamlit as st
 from supabase_db import db as supabase_db
 from typing import Optional, Dict
 
+COOKIE_SESSAO = "dp_refresh_token"
+COOKIE_DURACAO_S = 30 * 24 * 3600
+
+
 class Auth:
     """Classe para gerenciar autenticação com Supabase"""
+
+    @staticmethod
+    def _iniciar_sessao(user, session):
+        st.session_state.user = {'id': user.id, 'email': user.email}
+        st.session_state.logout_feito = False
+        if session and session.refresh_token:
+            st.session_state.cookie_pendente = session.refresh_token
+
+    @staticmethod
+    def sincronizar_cookie():
+        """Grava/apaga o cookie de sessão no navegador; chamar em toda execução do app"""
+        if 'cookie_pendente' not in st.session_state:
+            return
+        token = st.session_state.pop('cookie_pendente')
+        max_age = COOKIE_DURACAO_S if token else 0
+        st.html(
+            f"""<script>
+            document.cookie = "{COOKIE_SESSAO}=" + encodeURIComponent({json.dumps(token or "")})
+                + "; path=/; max-age={max_age}; SameSite=Strict"
+                + (location.protocol === "https:" ? "; Secure" : "");
+            </script>""",
+            unsafe_allow_javascript=True,
+        )
+
+    @staticmethod
+    def restaurar_sessao():
+        """Restaura o login a partir do cookie, se houver"""
+        if Auth.is_logged_in() or st.session_state.get('logout_feito'):
+            return
+        # st.context.cookies reflete o carregamento da página; não muda após logout nesta sessão
+        token = st.context.cookies.get(COOKIE_SESSAO)
+        if not token or not supabase_db.conectado or not supabase_db.client:
+            return
+
+        try:
+            response = supabase_db.client.auth.refresh_session(token)
+            if response.user:
+                # O Supabase gira o refresh token a cada uso, então o cookie é regravado
+                Auth._iniciar_sessao(response.user, response.session)
+                Auth.carregar_perfil()
+                return
+        except Exception:
+            pass
+        st.session_state.cookie_pendente = None
 
     @staticmethod
     def is_logged_in() -> bool:
@@ -52,11 +101,7 @@ class Auth:
             })
 
             if response.user:
-                # Salvar usuário no session_state
-                st.session_state.user = {
-                    'id': response.user.id,
-                    'email': response.user.email
-                }
+                Auth._iniciar_sessao(response.user, response.session)
                 return True, "Login realizado com sucesso!"
             else:
                 return False, "Email ou senha incorretos"
@@ -91,10 +136,7 @@ class Auth:
             if response.user:
                 # Fazer login automático (se não precisar confirmar email)
                 if response.session:
-                    st.session_state.user = {
-                        'id': response.user.id,
-                        'email': response.user.email
-                    }
+                    Auth._iniciar_sessao(response.user, response.session)
 
                     # Criar perfil inicial
                     if nome:
@@ -122,17 +164,65 @@ class Auth:
                 return False, f"Erro ao cadastrar: {error_msg}"
 
     @staticmethod
+    def solicitar_reset_senha(email: str) -> tuple[bool, str]:
+        """Envia email com código de recuperação de senha"""
+        if not supabase_db.conectado or not supabase_db.client:
+            return False, "Erro: Supabase não está conectado"
+
+        try:
+            supabase_db.client.auth.reset_password_for_email(email)
+            # Mensagem neutra para não revelar se o email está cadastrado
+            return True, "Se este email estiver cadastrado, você receberá um código de recuperação."
+        except Exception as e:
+            error_msg = str(e)
+            if "rate limit" in error_msg.lower() or "seconds" in error_msg.lower():
+                return False, "Aguarde alguns instantes antes de pedir um novo código."
+            return False, f"Erro ao enviar código: {error_msg}"
+
+    @staticmethod
+    def redefinir_senha(email: str, codigo: str, nova_senha: str) -> tuple[bool, str]:
+        """Valida o código recebido por email e define a nova senha"""
+        if not supabase_db.conectado or not supabase_db.client:
+            return False, "Erro: Supabase não está conectado"
+
+        try:
+            response = supabase_db.client.auth.verify_otp({
+                "email": email,
+                "token": codigo,
+                "type": "recovery"
+            })
+            if not response.user:
+                return False, "Código inválido ou expirado"
+        except Exception:
+            return False, "Código inválido ou expirado"
+
+        try:
+            supabase_db.client.auth.update_user({"password": nova_senha})
+            Auth._iniciar_sessao(response.user, response.session)
+            return True, "Senha alterada com sucesso!"
+        except Exception as e:
+            error_msg = str(e)
+            if "should be different" in error_msg.lower():
+                return False, "A nova senha deve ser diferente da anterior"
+            if "Password should be at least" in error_msg:
+                return False, "Senha deve ter no mínimo 6 caracteres"
+            return False, f"Erro ao alterar senha: {error_msg}"
+
+    @staticmethod
     def logout():
         """Faz logout do usuário"""
         try:
             if supabase_db.conectado and supabase_db.client:
-                supabase_db.client.auth.sign_out()
+                # "local": sai só deste navegador; o padrão "global" derrubaria os outros aparelhos
+                supabase_db.client.auth.sign_out({"scope": "local"})
         except:
             pass
 
         # Limpar session_state
         if 'user' in st.session_state:
             del st.session_state.user
+        st.session_state.logout_feito = True
+        st.session_state.cookie_pendente = None
 
         # Limpar perfil
         keys_to_clear = [
@@ -159,15 +249,16 @@ class Auth:
                     perfil = response.data[0]
 
                     # Carregar no session_state
-                    st.session_state.perfil_nome = perfil.get('nome', '')
-                    st.session_state.perfil_idade = perfil.get('idade', 30)
-                    st.session_state.perfil_sexo = perfil.get('sexo', 'Masculino')
-                    st.session_state.perfil_altura = perfil.get('altura', 170.0)
-                    st.session_state.perfil_peso = perfil.get('peso', 70.0)
-                    st.session_state.perfil_imc = perfil.get('imc', 0.0)
-                    st.session_state.perfil_alergias = perfil.get('alergias', '')
-                    st.session_state.perfil_hist_familiar = 'Sim' if perfil.get('hist_familiar_diabetes', False) else 'Não'
-                    st.session_state.perfil_medicacoes = perfil.get('medicacoes', '')
+                    st.session_state.perfil_nome = perfil.get('nome') or ''
+                    # O banco pode devolver 175 em vez de 175.0; os st.number_input exigem tipos consistentes
+                    st.session_state.perfil_idade = int(perfil.get('idade') or 30)
+                    st.session_state.perfil_sexo = perfil.get('sexo') or 'Masculino'
+                    st.session_state.perfil_altura = float(perfil.get('altura') or 170.0)
+                    st.session_state.perfil_peso = float(perfil.get('peso') or 70.0)
+                    st.session_state.perfil_imc = float(perfil.get('imc') or 0.0)
+                    st.session_state.perfil_alergias = perfil.get('alergias') or ''
+                    st.session_state.perfil_hist_familiar = 'Sim' if perfil.get('hist_familiar_diabetes') else 'Não'
+                    st.session_state.perfil_medicacoes = perfil.get('medicacoes') or ''
                     st.session_state.perfil_preenchido = True
 
                     return True
@@ -183,6 +274,9 @@ class Auth:
         user_id = Auth.get_user_id()
         if not user_id:
             return False, "Usuário não está logado"
+
+        if not supabase_db.conectado or not supabase_db.client:
+            return False, "Banco de dados indisponível"
 
         try:
             if supabase_db.conectado and supabase_db.client:

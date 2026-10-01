@@ -4,54 +4,50 @@ COMPONENTE GAUGE - MEDIDOR DE RISCO VISUAL
 Cria gráfico de gauge mostrando nível de risco
 """
 
+import io
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 
-def criar_gauge_risco(probabilidade, nome_arquivo='gauge_risco.png'):
+FUNDO = '#1b1b1b'
+TEXTO = '#e8e8e8'
+VERDE = '#4ade80'
+VERMELHO = '#f87171'
+
+
+def criar_gauge_risco(probabilidade, threshold):
     """
-    Cria um gauge (medidor semicircular) mostrando risco de diabetes
+    Cria um medidor semicircular do risco de diabetes.
 
     Args:
         probabilidade: Float de 0.0 a 1.0
-        nome_arquivo: Nome do arquivo para salvar
+        threshold: corte do modelo; o valor fica vermelho a partir dele
 
     Returns:
-        Caminho do arquivo gerado
+        BytesIO com o PNG (em memória, para não haver arquivo compartilhado entre usuários)
     """
-
-    # Converter para porcentagem
     risco_pct = probabilidade * 100
 
-    # Criar figura
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(6, 3.6))
+    fig.patch.set_facecolor(FUNDO)
+    ax.set_facecolor(FUNDO)
     ax.set_xlim(-1.2, 1.2)
-    ax.set_ylim(-0.2, 1.2)
+    ax.set_ylim(-0.45, 1.2)
     ax.set_aspect('equal')
     ax.axis('off')
 
-    # Definir zonas de risco
-    # Baixo: 0-25% (verde)
-    # Moderado: 25-50% (amarelo)
-    # Alto: 50-75% (laranja)
-    # Muito Alto: 75-100% (vermelho)
-
-    # Criar arco semicircular (de 0° a 180°)
-    theta = np.linspace(0, np.pi, 100)
-
-    # Raio externo e interno
     r_outer = 1.0
     r_inner = 0.7
 
-    # Desenhar zonas coloridas
     zonas = [
-        (0, 25, '#4CAF50', 'Baixo'),      # Verde
-        (25, 50, '#FFC107', 'Moderado'),  # Amarelo
-        (50, 75, '#FF9800', 'Alto'),      # Laranja
-        (75, 100, '#F44336', 'Muito Alto') # Vermelho
+        (0, 25, VERDE),
+        (25, 50, '#fbbf24'),
+        (50, 75, '#fb923c'),
+        (75, 100, VERMELHO),
     ]
 
-    for inicio, fim, cor, label in zonas:
+    for inicio, fim, cor in zonas:
         # Converter porcentagem para ângulo (0% = 0°, 100% = 180°)
         theta_inicio = np.pi * (100 - fim) / 100
         theta_fim = np.pi * (100 - inicio) / 100
@@ -72,63 +68,29 @@ def criar_gauge_risco(probabilidade, nome_arquivo='gauge_risco.png'):
         y = np.concatenate([y_outer, y_inner])
 
         # Desenhar zona
-        ax.fill(x, y, color=cor, alpha=0.8, edgecolor='white', linewidth=2)
+        ax.fill(x, y, color=cor, alpha=0.85, edgecolor=FUNDO, linewidth=2)
 
-    # Desenhar ponteiro (agulha)
-    # Converter risco para ângulo (0% = 180°, 100% = 0°)
+    # Ponteiro (0% = 180°, 100% = 0°)
     angulo_ponteiro = np.pi * (100 - risco_pct) / 100
-
-    # Coordenadas do ponteiro
     ponteiro_x = [0, 0.85 * np.cos(angulo_ponteiro)]
     ponteiro_y = [0, 0.85 * np.sin(angulo_ponteiro)]
+    ax.plot(ponteiro_x, ponteiro_y, color=TEXTO, linewidth=3, zorder=10, solid_capstyle='round')
+    ax.add_patch(plt.Circle((0, 0), 0.08, color=TEXTO, zorder=12))
 
-    # Desenhar ponteiro
-    ax.plot(ponteiro_x, ponteiro_y, color='black', linewidth=4, zorder=10)
-    ax.plot(ponteiro_x, ponteiro_y, color='white', linewidth=2, zorder=11)
-
-    # Círculo central
-    circle = plt.Circle((0, 0), 0.1, color='#333', zorder=12)
-    ax.add_patch(circle)
-
-    # Adicionar marcações de porcentagem
-    marcacoes = [0, 25, 50, 75, 100]
-    for marc in marcacoes:
+    for marc in [0, 25, 50, 75, 100]:
         ang = np.pi * (100 - marc) / 100
-        x_marc = 1.1 * np.cos(ang)
-        y_marc = 1.1 * np.sin(ang)
-        ax.text(x_marc, y_marc, f'{marc}%',
-               ha='center', va='center', fontsize=10, fontweight='bold')
+        ax.text(1.12 * np.cos(ang), 1.12 * np.sin(ang), f'{marc}%',
+                ha='center', va='center', fontsize=9, color='#a3a3a3')
 
-    # Título com valor
-    if risco_pct < 25:
-        cor_titulo = '#4CAF50'
-        nivel = 'BAIXO'
-    elif risco_pct < 50:
-        cor_titulo = '#FFC107'
-        nivel = 'MODERADO'
-    elif risco_pct < 75:
-        cor_titulo = '#FF9800'
-        nivel = 'ALTO'
-    else:
-        cor_titulo = '#F44336'
-        nivel = 'MUITO ALTO'
+    cor_valor = VERMELHO if probabilidade >= threshold else VERDE
+    ax.text(0, -0.28, f'{risco_pct:.1f}%',
+            ha='center', va='center', fontsize=26, fontweight='bold', color=cor_valor)
 
-    # Valor central
-    ax.text(0, -0.3, f'{risco_pct:.1f}%',
-           ha='center', va='center', fontsize=32, fontweight='bold', color=cor_titulo)
-
-    ax.text(0, -0.5, f'Risco {nivel}',
-           ha='center', va='center', fontsize=16, fontweight='bold', color=cor_titulo)
-
-    # Título superior
-    ax.text(0, 1.3, 'Risco de Diabetes Tipo 2',
-           ha='center', va='center', fontsize=14, fontweight='bold')
-
-    plt.tight_layout()
-    plt.savefig(nome_arquivo, dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close()
-
-    return nome_arquivo
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=150, bbox_inches='tight', facecolor=FUNDO)
+    plt.close(fig)
+    buffer.seek(0)
+    return buffer
 
 
 def criar_gauge_simples(probabilidade, nome_arquivo='gauge_simples.png'):
@@ -184,7 +146,8 @@ def criar_gauge_simples(probabilidade, nome_arquivo='gauge_simples.png'):
 
 if __name__ == "__main__":
     # Testar
-    criar_gauge_risco(0.25, 'teste_gauge_25.png')
-    criar_gauge_risco(0.65, 'teste_gauge_65.png')
+    for p in (0.25, 0.65):
+        with open(f'teste_gauge_{int(p * 100)}.png', 'wb') as f:
+            f.write(criar_gauge_risco(p, threshold=0.30).getvalue())
     criar_gauge_simples(0.45, 'teste_gauge_simples.png')
     print("Gauges de teste criados!")

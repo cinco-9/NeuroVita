@@ -196,6 +196,9 @@ print(f"   ROC-AUC: {melhor_modelo['ROC-AUC']:.3f}")
 # Comparar com baseline
 baseline = df_resultados[df_resultados['Modelo'].str.contains('Logistic')].iloc[0]
 melhoria = (melhor_modelo['F1-Score'] - baseline['F1-Score']) / baseline['F1-Score'] * 100
+xgb_linha = df_resultados[df_resultados['Modelo'].str.contains('XGBoost')].iloc[0]
+posicao_xgb = list(df_resultados['Modelo']).index(xgb_linha['Modelo']) + 1
+melhor_cv = df_resultados.sort_values('CV F1-Score', ascending=False).iloc[0]
 
 print(f"\n📊 GANHO SOBRE LOGISTIC REGRESSION (baseline):")
 print(f"   F1-Score: {baseline['F1-Score']:.3f} → {melhor_modelo['F1-Score']:.3f}")
@@ -346,20 +349,21 @@ Comparar o desempenho do modelo proposto (XGBoost com Feature Engineering) com m
 - F1-Score: {melhor_modelo['F1-Score']:.3f}
 - ROC-AUC: {melhor_modelo['ROC-AUC']:.3f}
 
-### 📊 Comparação com Baseline (Logistic Regression)
+### 📊 Comparação com o Baseline (Logistic Regression)
 
-- Baseline F1-Score: {baseline['F1-Score']:.3f}
-- Nosso modelo: {melhor_modelo['F1-Score']:.3f}
-- **Melhoria: +{melhoria:.1f}%**
+- Baseline: F1 {baseline['F1-Score']:.3f}
+- Melhor modelo ({melhor_modelo['Modelo']}): F1 {melhor_modelo['F1-Score']:.3f} ({melhoria:+.1f}%)
+- XGBoost: F1 {xgb_linha['F1-Score']:.3f}, {posicao_xgb}º de {len(df_resultados)} modelos
 
 ---
 
 ## Conclusões
 
-1. ✅ **XGBoost superou todos os modelos clássicos**
-2. ✅ Melhoria de {melhoria:.1f}% sobre baseline (Logistic Regression)
-3. ✅ Validação cruzada confirma robustez (CV F1={melhor_modelo['CV F1-Score']:.3f})
-4. ✅ Feature Engineering contribuiu significativamente
+1. O melhor F1 no conjunto de teste foi do **{melhor_modelo['Modelo']}** ({melhor_modelo['F1-Score']:.3f}).
+2. O XGBoost ficou em **{posicao_xgb}º lugar** (F1 {xgb_linha['F1-Score']:.3f}; CV F1 {xgb_linha['CV F1-Score']:.3f}).
+3. Na validação cruzada, a maior média foi do **{melhor_cv['Modelo']}** (CV F1 {melhor_cv['CV F1-Score']:.3f}).
+   Com apenas 768 pacientes (154 no teste), diferenças de poucos centésimos no F1 entre modelos
+   ficam dentro da variação esperada e não indicam superioridade clara de um algoritmo.
 
 ---
 

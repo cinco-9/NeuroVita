@@ -13,7 +13,7 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.neural_network import MLPClassifier
 from imblearn.over_sampling import SMOTE
 import xgboost as xgb
-import pickle
+
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -242,21 +242,9 @@ print("8. SALVANDO MELHOR MODELO...")
 melhor_nome = melhor['Modelo']
 melhor_modelo = modelos[melhor_nome]
 
-# Salvar modelo
-with open('modelo_melhorado_clinico.pkl', 'wb') as f:
-    pickle.dump(melhor_modelo, f)
-
-# Salvar scaler
-with open('scaler_melhorado.pkl', 'wb') as f:
-    pickle.dump(scaler, f)
-
-# Salvar threshold
-with open('threshold_melhorado.txt', 'w') as f:
-    f.write(str(melhor['Threshold']))
-
-print(f"   Modelo salvo: modelo_melhorado_clinico.pkl")
-print(f"   Scaler salvo: scaler_melhorado.pkl")
-print(f"   Threshold salvo: {melhor['Threshold']:.2f}")
+# Este experimento escolhia o limiar no conjunto de teste; o modelo do app agora é gerado por
+# otimizar_modelo_clinico.py (validação cruzada aninhada), então nada é salvo aqui.
+print("   (nada salvo: o modelo do app é gerado por otimizar_modelo_clinico.py)")
 print()
 
 # ============================================================================

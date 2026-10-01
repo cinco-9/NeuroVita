@@ -1,450 +1,149 @@
-# 🩺 Sistema de Predição de Diabetes Tipo 2
+# Sistema de Predição de Risco de Diabetes Tipo 2
 
-[![Python](https://img.shields.io/badge/Python-3.14-blue.svg)](https://www.python.org/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.42-red.svg)](https://streamlit.io/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+Aplicação web que estima o risco de diabetes tipo 2 com dois modelos de Machine Learning: um baseado em
+**exames laboratoriais** e outro baseado em **questionário de hábitos e saúde**, sem exames. O projeto inclui uma
+validação dos modelos entre populações do **Brasil (VIGITEL 2023)** e dos **EUA (BRFSS 2015)**.
 
-> **TCC: Agente de IA para Estimativa de Risco de Diabetes Tipo 2 e Doenças Cardiovasculares**  
-> Autor: David Reis | 2026
+Autor: David Reis · 2026
 
-Sistema completo de predição de diabetes tipo 2 utilizando Machine Learning, com interface web interativa, explicabilidade de predições (SHAP) e geração de relatórios em PDF.
+**Demo online:** https://neurovita-9jmmlcrm2ewvcxrvunmyhj.streamlit.app
 
-## 🌐 Demo Online
-
-**Acesse o sistema funcionando:** [https://neurovita-9jmmlcrm2ewvcxrvunmyhj.streamlit.app](https://neurovita-9jmmlcrm2ewvcxrvunmyhj.streamlit.app)
-
-> 📱 **Responsivo:** Funciona em desktop, tablet e mobile!
+> Sistema com finalidade educacional e de triagem. Não substitui avaliação médica.
 
 ---
 
-## 📋 Índice
+## Funcionalidades
 
-- [Sobre o Projeto](#-sobre-o-projeto)
-- [Descoberta Científica](#-descoberta-científica)
-- [Funcionalidades](#-funcionalidades)
-- [Tecnologias](#-tecnologias)
-- [Resultados](#-resultados)
-- [Instalação](#-instalação)
-- [Como Usar](#-como-usar)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
-- [Datasets](#-datasets)
-- [Contribuição](#-contribuição)
-- [Licença](#-licença)
+- **Cadastro e login** (Supabase Auth), com a sessão mantida ao recarregar a página e recuperação de senha por código.
+- **Perfil do usuário** (idade, sexo, altura, peso, IMC, histórico familiar, alergias, medicações), usado para preencher os formulários.
+- **Modelo Clínico**: risco a partir de exames (glicemia do TOTG 2h, insulina, pressão diastólica, IMC etc.).
+- **Modelo Comportamental**: risco a partir de 8 perguntas (idade, sexo, IMC, saúde geral, pressão alta, colesterol, atividade física, fumo).
+- **Resultado** com probabilidade, medidor visual, fatores de risco identificados e recomendações.
+- **Relatório em PDF** para levar ao médico.
+- **Histórico** das avaliações de cada usuário.
 
----
+## Modelos
 
-## 🎯 Sobre o Projeto
+| Modelo | Algoritmo | Dados | Entrada | F1 | Precisão | Recall | AUC |
+|---|---|---|---|---|---|---|---|
+| Clínico | Random Forest | Pima Indians (768 pacientes) | 8 exames | 0,69 ± 0,04 | 60% | 82% | 0,84 |
+| Comportamental | XGBoost | BRFSS 2015 (253.680 entrevistas) | 8 respostas de questionário | 0,46 | 37% | 61% | 0,82 |
 
-Este projeto desenvolveu um sistema inteligente para **predição de risco de diabetes tipo 2** utilizando técnicas avançadas de Machine Learning. O sistema oferece:
+Em nenhum dos dois o conjunto que mede o desempenho é usado para escolher modelo, hiperparâmetros ou limiar:
 
-- **2 modelos preditivos**: Clínico (baseado em exames) e Comportamental (baseado em hábitos)
-- **Interface web completa** com autenticação e histórico personalizado
-- **Explicabilidade** através de gráficos SHAP
-- **Relatórios em PDF** para levar ao médico
-- **Recomendações personalizadas** baseadas em fatores de risco individuais
+- **Clínico** ([`otimizar_modelo_clinico.py`](otimizar_modelo_clinico.py)): validação cruzada aninhada (5 partes × 3
+  repetições) comparando Regressão Logística, XGBoost, Random Forest e SVM. Zeros em glicemia, pressão, dobra
+  cutânea, insulina e IMC são tratados como "não medido" e imputados pela mediana. A regra de escolha foi definida
+  antes de rodar: maior F1 médio, preferindo o modelo mais simples se estiver a menos de 1 erro-padrão.
+  Resultados de todos os candidatos: [`resultados_otimizacao_clinico.json`](resultados_otimizacao_clinico.json).
+- **Comportamental** ([`treinar_modelo_comportamental.py`](treinar_modelo_comportamental.py)): divisão 60/20/20;
+  hiperparâmetros e limiar escolhidos na validação, métricas no teste.
 
-### 🎓 Contexto Acadêmico
+Os dois ficam na faixa que a literatura metodologicamente cuidadosa relata para esses dados (AUC ~0,82–0,85 no
+Pima; ~0,82–0,83 no BRFSS).
 
-Trabalho de Conclusão de Curso focado em aplicações de Inteligência Artificial na área da saúde, com ênfase em medicina preventiva e diagnóstico precoce.
+**Importante sobre o modelo clínico:** o dataset Pima mede a glicemia **2 horas após ingerir glicose** (TOTG) e a
+pressão **diastólica**. Informar a glicemia de jejum subestima o risco.
 
----
+## Validação Brasil x EUA
 
-## 🔬 Descoberta Científica
+[`validacao_cross_cultural.py`](validacao_cross_cultural.py) treina o mesmo pipeline nos dois países, usando só as
+variáveis com definição equivalente nas duas pesquisas (idade, sexo, IMC, pressão alta, saúde autoavaliada), e
+testa cada modelo também no outro país:
 
-### **Features Clínicas são 53% Superiores!**
+| Treinado em → testado em | AUC |
+|---|---|
+| Brasil → Brasil | 0,813 |
+| EUA → EUA | 0,814 |
+| EUA → Brasil | 0,814 |
+| Brasil → EUA | 0,773 |
 
-Um dos principais achados deste trabalho foi a **comparação entre dois tipos de features**:
+O modelo treinado nos EUA ordena o risco da população brasileira tão bem quanto um modelo treinado no Brasil.
+Relatório completo, figuras e limitações: [dados_vigitel/ANALISE_CROSS_CULTURAL.md](dados_vigitel/ANALISE_CROSS_CULTURAL.md).
 
-| Tipo | Dataset | Registros | F1-Score | Precisão | Recall |
-|------|---------|-----------|----------|----------|--------|
-| **🔬 Clínico** | Pima Indians | 768 | **0.72** | **63.4%** | **83.3%** |
-| **📋 Comportamental** | BRFSS 2015 | 253,680 | 0.47 | 37.1% | 63.8% |
-| **📊 Diferença** | - | - | **+53.4%** | **+70.8%** | **+30.5%** |
+## Estudo complementar: diabetes não diagnosticado (NHANES)
 
-### Por quê?
+[`estudo_nhanes_rastreamento.py`](estudo_nhanes_rastreamento.py) usa 17.504 adultos **sem diagnóstico** de diabetes
+do NHANES 2011-2018 (inquérito dos EUA com exame de sangue) para identificar quem tem HbA1c ≥ 6,5% e não sabe,
+usando só informações de uma consulta comum (sem exame de glicose). Protocolo definido antes de rodar, validação
+cruzada aninhada e comparação com o escore de risco da American Diabetes Association (ADA) nas mesmas pessoas:
 
-- **Features clínicas** (glicose, insulina, pressão) medem **diretamente** o estado fisiológico
-- **Features comportamentais** (hábitos de vida) medem apenas **fatores de risco indiretos**
-- **Qualidade > Quantidade**: 768 registros clínicos superam 253k registros comportamentais!
+| | AUC | Testar para achar 80% dos casos |
+|---|---|---|
+| **Regressão Logística (modelo)** | **0,827 ± 0,018** | **31%** |
+| Escore ADA | 0,762 | 40% |
+| Só idade | 0,673 | 53% |
 
-**Conclusão:** Para diagnóstico preciso, **exames laboratoriais são insubstituíveis**. Hábitos de vida são úteis para triagem inicial.
+Para achar 80% dos casos, o modelo precisa testar **23% menos pessoas** que o escore da ADA (31% contra 40% da população).
+Relatório: [dados_nhanes/ESTUDO_RASTREAMENTO_NHANES.md](dados_nhanes/ESTUDO_RASTREAMENTO_NHANES.md).
 
----
+## Como rodar localmente
 
-## ✨ Funcionalidades
+Requisitos: Python 3.11+ e um projeto no [Supabase](https://supabase.com) (veja [SUPABASE_SETUP.md](SUPABASE_SETUP.md)).
 
-### 🔐 Autenticação e Perfil
-- Sistema de login/cadastro com Supabase Auth
-- Perfil pessoal com cálculo automático de IMC
-- Histórico individual de predições
-- Row Level Security (RLS) - cada usuário vê apenas seus dados
-
-### 🔬 Modelo Clínico (Pima Indians)
-- Predição baseada em 8 exames laboratoriais
-- Feature Engineering: 16 features totais
-- **F1-Score: 0.72** (Excelente!)
-- Threshold otimizado: 0.35
-- **Gráficos SHAP**: explicação visual da predição
-- **Exportar PDF**: relatório profissional
-
-### 📋 Modelo Comportamental (BRFSS)
-- Predição baseada em hábitos de vida (SEM exames)
-- Útil para triagem inicial
-- **F1-Score: 0.47**
-- Threshold otimizado: 0.24
-- **Exportar PDF**: relatório completo
-
-### 📊 Dashboard & Estatísticas
-- **5 gráficos interativos**:
-  1. Distribuição por risco (pizza)
-  2. Predições por modelo (barras)
-  3. Evolução temporal (linha)
-  4. Evolução de probabilidades (barras)
-  5. Distribuição de probabilidades (histograma)
-- Comparação Clínico vs Comportamental
-- Histórico completo de predições
-- Estatísticas em tempo real
-- **📊 Gauge de Risco Visual**: Medidor semicircular 0-100% 🆕
-- **📈 Análise Temporal**: Evolução do risco ao longo do tempo 🆕
-
-### 📊 Gauge de Risco Visual 🆕
-- Medidor semicircular colorido (verde→amarelo→laranja→vermelho)
-- Mostra probabilidade de 0-100% com agulha indicadora
-- Zonas de risco claramente demarcadas
-- Integrado em ambos os modelos
-- **Visual impactante e fácil de entender!**
-
-### 📈 Análise Temporal Pessoal 🆕
-- **Gráfico de evolução**: linha do tempo mostrando progresso
-- **Comparação antes vs agora**: primeira vs última avaliação
-- **4 métricas de evolução**: primeira avaliação, atual, mudança total, período
-- **Mensagens motivacionais**: feedback personalizado sobre melhora/piora
-- **Funciona automaticamente**: basta ter 2+ predições
-
-### 🎯 Recomendações Personalizadas
-- Baseadas em **fatores de risco individuais**
-- Ajustadas por **idade, sexo e histórico familiar**
-- Diferenciam entre **alto e baixo risco**
-- Incluem **alergias e medicações** do perfil
-
-### 📄 Geração de PDF
-- Relatório profissional completo
-- Dados do paciente
-- Resultado colorido (verde/vermelho)
-- Gráficos SHAP (quando disponível)
-- Recomendações personalizadas
-- Aviso médico
-
----
-
-## 🛠️ Tecnologias
-
-### Machine Learning
-- **XGBoost** - Modelo principal (F1=0.72)
-- **LightGBM** - Ensemble
-- **CatBoost** - Ensemble
-- **Scikit-learn** - Pré-processamento e métricas
-- **SMOTE** - Balanceamento de classes
-- **SHAP** - Explicabilidade
-
-### Otimização
-- **Optuna** - Otimização Bayesiana de hiperparâmetros
-- **GridSearchCV** - Busca em grade
-- **Stratified K-Fold** - Validação cruzada robusta
-
-### Frontend/Backend
-- **Streamlit** - Interface web interativa
-- **Supabase** - Banco de dados PostgreSQL + Autenticação
-- **ReportLab** - Geração de PDF
-- **Matplotlib/Seaborn** - Visualizações
-
-### Bibliotecas Python
-```python
-pandas==3.0.5
-numpy==2.5.3
-scikit-learn==1.9.0
-xgboost==3.4.1
-lightgbm==4.6.0
-catboost==1.2.10
-streamlit==1.42.0
-supabase==3.0.0
-shap==0.52.0
-reportlab==5.0.1
-matplotlib==3.11.1
-optuna==5.0.0
-imbalanced-learn==0.13.0
-```
-
----
-
-## 📊 Resultados
-
-### Modelo Clínico (MELHOR)
-
-```
-Dataset: Pima Indians (768 registros)
-Features: 16 (8 clínicas + 8 engenhadas)
-Algoritmo: XGBoost
-
-Métricas:
-✅ F1-Score:    0.72
-✅ Precisão:    63.4%
-✅ Recall:      83.3%
-✅ ROC-AUC:     0.82
-✅ Threshold:   0.35
-```
-
-**Top 5 Features (SHAP):**
-1. Glucose_BMI (1.12)
-2. Age_Glucose (0.60)
-3. DiabetesPedigreeFunction (0.39)
-4. Glucose (0.35)
-5. BMI (0.28)
-
-### Modelos Testados
-
-| Modelo | F1-Score | Status |
-|--------|----------|--------|
-| XGBoost (Feature Eng) | **0.72** | 🏆 Melhor |
-| XGBoost Baseline | 0.69 | ✅ |
-| Stacking Ensemble | 0.69 | ✅ |
-| CatBoost | 0.69 | ✅ |
-| Neural Network (MLP) | 0.68 | ✅ |
-| Logistic Regression | 0.44 | ⚠️ |
-| Modelo Comportamental | 0.47 | ⚠️ |
-
-### Validação Cruzada (5-fold)
-
-```
-F1-Score CV: 0.80 ± 0.02
-```
-
-Modelo é **estável** e **bem generalizado**!
-
----
-
-## 🚀 Instalação
-
-### Pré-requisitos
-
-- Python 3.14+
-- pip
-- Git
-
-### Passo a Passo
-
-1. **Clone o repositório**
-```bash
-git clone https://github.com/seu-usuario/tcc-diabetes.git
-cd tcc-diabetes
-```
-
-2. **Crie ambiente virtual**
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-```
-
-3. **Instale dependências**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Configure Supabase** (Opcional - para histórico)
+Crie um arquivo `.env` na raiz:
 
-Crie arquivo `.env` na raiz:
-```env
-SUPABASE_URL=sua_url_aqui
-SUPABASE_KEY=sua_chave_aqui
+```
+SUPABASE_URL=https://<seu-projeto>.supabase.co
+SUPABASE_KEY=<chave anon>
 ```
 
-Siga instruções em `SUPABASE_SETUP.md` para configurar tabelas.
-
-5. **Execute a aplicação**
 ```bash
-streamlit run app_diabetes.py
+python -m streamlit run app_diabetes.py
 ```
 
-6. **Acesse no navegador**
-```
-http://localhost:8501
-```
+O app abre em http://localhost:8501. Deploy no Streamlit Cloud: [DEPLOY_STREAMLIT.md](DEPLOY_STREAMLIT.md).
 
----
+## Retreinar os modelos
 
-## 📖 Como Usar
+| O quê | Comando | Gera |
+|---|---|---|
+| Modelo clínico | `python otimizar_modelo_clinico.py` | `modelo_clinico.json`, `modelo_clinico_meta.json`, `resultados_otimizacao_clinico.json` |
+| Modelo comportamental | `python treinar_modelo_comportamental.py` | `modelo_comportamental.json`, `modelo_comportamental_meta.json` |
+| Dados do VIGITEL | `python mapear_vigitel_completo.py` | `dados_vigitel/vigitel_2023_processado.csv` |
+| Validação Brasil x EUA | `python validacao_cross_cultural.py` | relatório, JSON e figuras em `dados_vigitel/` |
+| Estudo NHANES | `python baixar_nhanes.py` e `python estudo_nhanes_rastreamento.py` | relatório, JSON e figuras em `dados_nhanes/` |
+| Comparação com a literatura | `python comparacao_literatura.py` | [COMPARACAO_LITERATURA.md](COMPARACAO_LITERATURA.md) |
 
-### 1️⃣ Criar Conta
-- Clique em "Cadastro"
-- Preencha email e senha
-- Confirme email (se configurado)
+Os scripts de treino precisam também de `scikit-learn`, `imbalanced-learn`, `scipy` e `openpyxl`, que não estão no
+`requirements.txt` (ele lista só o necessário para o app). Os modelos são salvos em JSON, sem pickle: o
+comportamental no formato nativo do XGBoost (o app exige `xgboost>=3.4`, versão usada no treino) e o clínico
+como as árvores do Random Forest, avaliadas pelo app com numpy (resultado idêntico ao do scikit-learn, conferido
+no próprio script de treino).
 
-### 2️⃣ Completar Perfil
-- Vá em "Meu Perfil"
-- Preencha: nome, idade, sexo, altura, peso
-- IMC é calculado automaticamente
-- Adicione alergias e histórico familiar (opcional)
-
-### 3️⃣ Fazer Predição
-
-**Modelo Clínico** (requer exames):
-- Preencha: glicose, pressão, insulina, IMC, etc.
-- Clique "Analisar Risco"
-- Veja resultado + gráfico SHAP explicando
-- Baixe relatório PDF
-
-**Modelo Comportamental** (sem exames):
-- Preencha hábitos de vida
-- Clique "Analisar Risco"
-- Veja recomendações personalizadas
-- Baixe relatório PDF
-
-### 4️⃣ Ver Histórico
-- Vá em "Histórico & Estatísticas"
-- Veja evolução ao longo do tempo
-- Compare resultados
-- Analise gráficos
-
----
-
-## 📁 Estrutura do Projeto
+## Estrutura
 
 ```
-tcc-diabetes/
-│
-├── app_diabetes.py              # Aplicação principal Streamlit
-├── auth.py                      # Sistema de autenticação
-├── supabase_db.py              # Integração banco de dados
-├── pdf_generator.py            # Geração de relatórios PDF
-├── shap_explicabilidade.py     # Gráficos SHAP
-│
-├── treinar_modelo.py           # Baseline Logistic Regression
-├── treinar_xgboost.py          # XGBoost básico
-├── modelo_final_otimizado.py   # XGBoost + Feature Engineering
-├── ensemble_definitivo.py      # Voting + Stacking
-├── modelo_hibrido_definitivo.py # Comparação Pima vs BRFSS
-├── analise_shap_explicabilidade.py # Análise SHAP completa
-├── melhorar_precisao.py        # Deep Learning + Calibração
-├── otimizacao_bayesiana.py     # Optuna
-├── ensemble_stacking_final.py  # Ensemble avançado
-│
-├── pima_diabetes.csv           # Dataset Pima Indians
-├── diabetes_binary_health_indicators_BRFSS2015.csv # Dataset BRFSS
-│
-├── create_table.sql            # SQL: tabela predições
-├── create_users_table.sql      # SQL: tabela usuários
-├── .env                        # Credenciais Supabase
-├── requirements.txt            # Dependências Python
-├── README.md                   # Este arquivo
-└── SUPABASE_SETUP.md          # Guia configuração Supabase
+app_diabetes.py                  Aplicação Streamlit (páginas, formulários, resultados)
+auth.py                          Login, cadastro, sessão persistente, recuperação de senha, perfil
+supabase_db.py                   Acesso ao banco (uma conexão por sessão de usuário)
+pdf_generator.py                 Relatório em PDF
+gauge_component.py               Medidor de risco
+analise_temporal.py              Gráficos do histórico
+modelo_*.json                    Modelos treinados e metadados (features, limiar, imputação, normalização)
+otimizar_modelo_clinico.py       Seleção e treino do modelo clínico (validação cruzada aninhada)
+melhorar_precisao.py             Experimento anterior do modelo clínico (histórico)
+treinar_modelo_comportamental.py Treino do modelo comportamental
+mapear_vigitel_completo.py       Preparação dos dados do VIGITEL
+validacao_cross_cultural.py      Validação Brasil x EUA
+baixar_nhanes.py                 Download dos dados do NHANES
+estudo_nhanes_rastreamento.py    Estudo de diabetes não diagnosticado (NHANES)
+dados_vigitel/                   Dados, dicionário e resultados do VIGITEL
 ```
 
----
+## Dados
 
-## 📊 Datasets
+- **Pima Indians Diabetes**: 768 mulheres de origem Pima (EUA), com exames clínicos.
+- **BRFSS 2015**: versão limpa do Kaggle do inquérito telefônico do CDC (EUA).
+- **VIGITEL 2023**: inquérito telefônico do Ministério da Saúde (Brasil), com dicionário oficial em `dados_vigitel/`.
+- **NHANES 2011-2018**: inquérito do CDC (EUA) com exame físico e de sangue, baixado por `baixar_nhanes.py`.
 
-### 🔬 Pima Indians Diabetes Database
-- **Fonte:** UCI Machine Learning Repository
-- **Registros:** 768
-- **Features:** 8 clínicas
-- **Target:** Diabetes (0/1)
-- **Prevalência:** 34.9%
-- **Uso:** Modelo Clínico
+## Limitações
 
-**Features:**
-- Pregnancies (Gestações)
-- Glucose (Glicose em jejum)
-- BloodPressure (Pressão arterial)
-- SkinThickness (Espessura da pele)
-- Insulin (Insulina sérica)
-- BMI (Índice de Massa Corporal)
-- DiabetesPedigreeFunction (Histórico familiar)
-- Age (Idade)
-
-### 📋 BRFSS 2015 Diabetes Health Indicators
-- **Fonte:** CDC Behavioral Risk Factor Surveillance System
-- **Registros:** 253,680
-- **Features:** 21 comportamentais
-- **Target:** Diabetes (0/1)
-- **Prevalência:** 13.9%
-- **Uso:** Modelo Comportamental
-
-**Features principais:**
-- HighBP, HighChol (Condições de saúde)
-- BMI, Smoker, PhysActivity (Hábitos)
-- Fruits, Veggies (Alimentação)
-- GenHlth, Age (Saúde geral)
-
----
-
-## 🤝 Contribuição
-
-Contribuições são bem-vindas! Sinta-se à vontade para:
-
-1. Fork o projeto
-2. Criar uma branch (`git checkout -b feature/NovaFuncionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/NovaFuncionalidade`)
-5. Abrir um Pull Request
-
-### Ideias para Contribuir:
-- 🌍 Tradução para outros idiomas
-- 📱 Versão mobile
-- 🔗 Integração com wearables
-- 📈 Mais visualizações
-- 🧪 Novos modelos de ML
-- 📚 Mais datasets
-
----
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
----
-
-## 📧 Contato
-
-**David Reis**  
-📧 Email: daaviidreeis@gmail.com  
-💼 LinkedIn: [seu-linkedin]  
-🐙 GitHub: [seu-github]
-
----
-
-## 🙏 Agradecimentos
-
-- **UCI Machine Learning Repository** - Dataset Pima Indians
-- **CDC** - Dataset BRFSS 2015
-- **Streamlit** - Framework web incrível
-- **Supabase** - Backend completo e gratuito
-- **SHAP** - Explicabilidade de ML
-- **Comunidade Python** - Bibliotecas fantásticas
-
----
-
-## ⚠️ Aviso Importante
-
-**Este sistema é para fins educacionais e de pesquisa.**
-
-Os resultados **NÃO substituem** uma consulta médica profissional. Sempre consulte um médico endocrinologista para diagnóstico e tratamento adequados.
-
----
-
-## 📚 Referências
-
-1. Smith, J.W., et al. (1988). "Using the ADAP learning algorithm to forecast the onset of diabetes mellitus"
-2. CDC. (2015). "Behavioral Risk Factor Surveillance System"
-3. Lundberg, S.M., & Lee, S.I. (2017). "A Unified Approach to Interpreting Model Predictions" (SHAP)
-4. Chen, T., & Guestrin, C. (2016). "XGBoost: A Scalable Tree Boosting System"
-
----
-
-<div align="center">
-
-**⭐ Se este projeto foi útil, deixe uma estrela! ⭐**
-
-Made with ❤️ by David Reis
-
-</div>
+- O dataset clínico é pequeno (768 pacientes) e restrito a mulheres de uma etnia.
+- Nos inquéritos telefônicos o diabetes é **autorreferido**, o que subestima casos não diagnosticados.
+- O VIGITEL não pergunta sobre colesterol alto, então essa variável não entra na comparação entre países.
