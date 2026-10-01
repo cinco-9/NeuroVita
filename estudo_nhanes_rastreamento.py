@@ -291,7 +291,8 @@ Diabetes Association (ADA), usado na prática?
 ## Dados e desfecho
 
 - NHANES (CDC, EUA), ciclos {', '.join(CICLOS.values())}: inquérito com exame físico e de sangue.
-- Adultos ≥ 20 anos, não grávidas, com HbA1c medida e **sem** diagnóstico prévio de diabetes: **{len(y):,} pessoas**.
+- Adultos ≥ 20 anos, não grávidas, com HbA1c medida e **sem** diagnóstico prévio de diabetes, excluídas {int((~validos).sum())} pessoas
+  sem IMC medido (necessário para o escore ADA): **{len(y):,} pessoas**.
 - Desfecho: **HbA1c ≥ 6,5%** (critério diagnóstico). Casos: **{y.sum()} ({pct(y.mean())} da amostra; {pct(saida['prevalencia_ponderada'])}
   com os pesos amostrais, estimativa para a população adulta dos EUA sem diagnóstico)**.
 - HbA1c e glicemia **não** entram no modelo, pois definem o desfecho.

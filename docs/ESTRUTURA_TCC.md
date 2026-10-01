@@ -74,7 +74,7 @@ Tabela com as quatro bases:
 | Pima Indians | EUA | 768 | Exames clínicos | Modelo clínico |
 | BRFSS 2015 | EUA | 253.680 | Questionário telefônico | Modelo comportamental; validação Brasil x EUA |
 | VIGITEL 2023 | Brasil | 19.919 | Questionário telefônico | Validação Brasil x EUA |
-| NHANES 2011-2018 | EUA | 17.504 | Exame físico e de sangue + questionário | Estudo de diabetes não diagnosticado |
+| NHANES 2011-2018 | EUA | 17.306 | Exame físico e de sangue + questionário | Estudo de diabetes não diagnosticado |
 
 Para cada base: origem, variáveis, definição do desfecho e limitações (Pima: só mulheres de uma etnia;
 BRFSS: pré-diabetes e diabetes agrupados e autorreferidos; VIGITEL: autorreferido, sem colesterol;
@@ -153,7 +153,7 @@ Resultado dos testes funcionais (todas as páginas, casos de baixo e alto risco,
 - **O limite está nos dados, não no algoritmo:** quatro algoritmos ficaram a menos de 0,02 de F1 no Pima, e
   16 configurações a menos de 0,004 de AUC no BRFSS; o que mais pesa é ter a glicose medida (Pima 0,84 com
   TOTG; NHANES 0,83 sem glicose, mas com mais variáveis e dados).
-- **Comparabilidade:** por que o F1 do clínico (35% de prevalência) não se compara ao do NHANES (3,8%).
+- **Comparabilidade:** por que o F1 do clínico (35% de prevalência) não se compara ao do NHANES (3,7%).
 - **Generalização entre países:** os mesmos fatores (pressão, idade, saúde autoavaliada, IMC) ordenam o
   risco igualmente bem no Brasil e nos EUA.
 - **Rigor metodológico:** escolhas feitas só com dados de treino; regras definidas antes de rodar; em versões

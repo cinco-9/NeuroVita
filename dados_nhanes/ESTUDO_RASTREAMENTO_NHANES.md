@@ -11,7 +11,8 @@ Diabetes Association (ADA), usado na prática?
 ## Dados e desfecho
 
 - NHANES (CDC, EUA), ciclos 2011-2012, 2013-2014, 2015-2016, 2017-2018: inquérito com exame físico e de sangue.
-- Adultos ≥ 20 anos, não grávidas, com HbA1c medida e **sem** diagnóstico prévio de diabetes: **17,306 pessoas**.
+- Adultos ≥ 20 anos, não grávidas, com HbA1c medida e **sem** diagnóstico prévio de diabetes, excluídas 198 pessoas
+  sem IMC medido (necessário para o escore ADA): **17,306 pessoas**.
 - Desfecho: **HbA1c ≥ 6,5%** (critério diagnóstico). Casos: **648 (3.7% da amostra; 2.4%
   com os pesos amostrais, estimativa para a população adulta dos EUA sem diagnóstico)**.
 - HbA1c e glicemia **não** entram no modelo, pois definem o desfecho.

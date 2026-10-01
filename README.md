@@ -63,7 +63,7 @@ Relatório completo, figuras e limitações: [dados_vigitel/ANALISE_CROSS_CULTUR
 
 ## Estudo complementar: diabetes não diagnosticado (NHANES)
 
-[`estudo_nhanes_rastreamento.py`](estudo_nhanes_rastreamento.py) usa 17.504 adultos **sem diagnóstico** de diabetes
+[`estudo_nhanes_rastreamento.py`](estudo_nhanes_rastreamento.py) usa 17.306 adultos **sem diagnóstico** de diabetes
 do NHANES 2011-2018 (inquérito dos EUA com exame de sangue) para identificar quem tem HbA1c ≥ 6,5% e não sabe,
 usando só informações de uma consulta comum (sem exame de glicose). Protocolo definido antes de rodar, validação
 cruzada aninhada e comparação com o escore de risco da American Diabetes Association (ADA) nas mesmas pessoas:

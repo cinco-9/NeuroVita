@@ -25,7 +25,7 @@ Foram utilizadas quatro bases de dados públicas, resumidas no Quadro 1.
 | Pima Indians Diabetes | NIDDK, EUA | 768 | Exames clínicos | Modelo clínico |
 | BRFSS 2015 | CDC, EUA | 253.680 | Questionário telefônico | Modelo comportamental e validação Brasil x EUA |
 | VIGITEL 2023 | Ministério da Saúde, Brasil | 19.919 | Questionário telefônico | Validação Brasil x EUA |
-| NHANES 2011–2018 | CDC, EUA | 17.504 | Exame físico, exames de sangue e questionário | Estudo de diabetes não diagnosticado |
+| NHANES 2011–2018 | CDC, EUA | 17.306 | Exame físico, exames de sangue e questionário | Estudo de diabetes não diagnosticado |
 
 ### 3.1.1 Pima Indians Diabetes
 
@@ -81,8 +81,9 @@ quando ponderada pelos pesos amostrais.
 O *National Health and Nutrition Examination Survey* (NHANES) é um inquérito do CDC que combina entrevista,
 exame físico e coleta de sangue em amostra representativa da população dos Estados Unidos [CITAR: CDC, NHANES].
 Foram utilizados quatro ciclos (2011–2012, 2013–2014, 2015–2016 e 2017–2018). Foram incluídos adultos com 20
-anos ou mais, não gestantes, com hemoglobina glicada (HbA1c) medida e **sem diagnóstico prévio de diabetes**,
-totalizando 17.504 pessoas.
+anos ou mais, não gestantes, com hemoglobina glicada (HbA1c) medida e **sem diagnóstico prévio de diabetes**
+(17.504 pessoas). Foram excluídas 198 pessoas sem IMC medido, necessário para o cálculo do escore de risco
+usado como comparação (Seção 3.5.3), resultando em 17.306 pessoas.
 
 ## 3.2 Modelo clínico
 
