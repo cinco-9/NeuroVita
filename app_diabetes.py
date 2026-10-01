@@ -70,8 +70,13 @@ st.markdown("""
 
     .block-container {
         max-width: 1150px !important;
-        padding-top: 2rem !important;
-        padding-bottom: 2rem !important;
+        padding-top: 3.5rem !important;  /* abaixo da barra do topo do Streamlit */
+        padding-bottom: 1.5rem !important;
+    }
+
+    /* Menos espaço entre elementos */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.6rem !important;
     }
 
     * {
@@ -80,20 +85,20 @@ st.markdown("""
     }
 
     .main-header {
-        font-size: 28px;
+        font-size: 22px;
         font-weight: 800;
         text-align: center;
         color: var(--text);
-        padding: 8px 8px 5px;
-        margin-bottom: 3px;
+        padding: 0 8px 2px;
+        margin-bottom: 0;
         letter-spacing: -0.5px;
     }
 
     .sub-header {
-        font-size: 13px;
+        font-size: 12px;
         text-align: center;
         color: var(--muted);
-        padding-bottom: 12px;
+        padding-bottom: 6px;
         font-weight: 400;
         letter-spacing: 0.5px;
     }
@@ -114,7 +119,7 @@ st.markdown("""
 
     .metric-box {
         background: var(--surface);
-        padding: 30px;
+        padding: 16px 20px;
         border-radius: 20px;
         border: 1px solid var(--border);
         transition: transform 0.3s ease, border-color 0.3s ease;
@@ -127,7 +132,7 @@ st.markdown("""
 
     .result-high {
         background: var(--danger-soft);
-        padding: 30px;
+        padding: 16px 20px;
         border-radius: 20px;
         border: 1px solid var(--danger);
     }
@@ -136,12 +141,12 @@ st.markdown("""
         color: var(--danger) !important;
         -webkit-text-fill-color: var(--danger) !important;
         font-weight: 700;
-        font-size: 28px;
+        font-size: 18px;
     }
 
     .result-low {
         background: var(--success-soft);
-        padding: 30px;
+        padding: 16px 20px;
         border-radius: 20px;
         border: 1px solid var(--success);
     }
@@ -150,15 +155,15 @@ st.markdown("""
         color: var(--success) !important;
         -webkit-text-fill-color: var(--success) !important;
         font-weight: 700;
-        font-size: 28px;
+        font-size: 18px;
     }
 
     .stButton>button {
         background: var(--surface-2);
         color: var(--text);
         border: 1px solid var(--border-strong);
-        border-radius: 12px;
-        padding: 12px 30px;
+        border-radius: 10px;
+        padding: 6px 20px;
         font-weight: 600;
         transition: all 0.3s ease;
     }
@@ -176,8 +181,8 @@ st.markdown("""
         border: 1px solid var(--border) !important;
         border-radius: 12px !important;
         color: var(--text) !important;
-        padding: 12px 16px !important;
-        font-size: 14px !important;
+        padding: 8px 12px !important;
+        font-size: 13px !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         -webkit-text-fill-color: var(--text) !important;
     }
@@ -215,8 +220,8 @@ st.markdown("""
     .stSelectbox label {
         color: var(--muted) !important;
         font-weight: 600 !important;
-        font-size: 13px !important;
-        margin-bottom: 8px !important;
+        font-size: 12px !important;
+        margin-bottom: 2px !important;
         letter-spacing: 0.3px;
     }
 
@@ -265,9 +270,9 @@ st.markdown("""
         background: var(--accent) !important;
         border: none !important;
         border-radius: 12px !important;
-        padding: 12px 28px !important;
+        padding: 8px 20px !important;
         font-weight: 700 !important;
-        font-size: 14px !important;
+        font-size: 13px !important;
         color: var(--on-accent) !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         text-transform: uppercase !important;
@@ -294,8 +299,8 @@ st.markdown("""
     [data-testid="stForm"] {
         background: var(--surface) !important;
         border: 1px solid var(--border) !important;
-        border-radius: 15px !important;
-        padding: 18px !important;
+        border-radius: 12px !important;
+        padding: 14px !important;
     }
 
     /* Headings melhorados */
@@ -304,17 +309,24 @@ st.markdown("""
         font-weight: 700 !important;
     }
 
+    h2 {
+        font-size: 18px !important;
+        margin: 4px 0 !important;
+        padding: 0 !important;
+    }
+
     h3 {
-        font-size: 16px !important;
-        margin-bottom: 8px !important;
+        font-size: 15px !important;
+        margin-bottom: 4px !important;
+        padding: 4px 0 !important;
         color: var(--accent) !important;
         font-weight: 700 !important;
     }
 
     h4 {
-        font-size: 18px !important;
-        margin-bottom: 18px !important;
-        margin-top: 5px !important;
+        font-size: 16px !important;
+        margin-bottom: 8px !important;
+        margin-top: 0 !important;
         color: var(--text) !important;
         font-weight: 600 !important;
         letter-spacing: 0.3px;
@@ -322,12 +334,16 @@ st.markdown("""
 
     p, li {
         color: var(--text) !important;
-        font-size: 14px !important;
+        font-size: 13px !important;
+    }
+
+    p {
+        margin-bottom: 4px !important;
     }
 
     p.prob {
-        font-size: 24px !important;
-        margin: 4px 0 8px !important;
+        font-size: 20px !important;
+        margin: 2px 0 4px !important;
     }
 
     .auth-footer {
@@ -342,15 +358,15 @@ st.markdown("""
     /* Linha separadora */
     hr {
         border-color: var(--border) !important;
-        margin: 10px 0 !important;
+        margin: 4px 0 !important;
     }
 
     /* Efeitos de erro e sucesso melhorados */
     .stSuccess, .stError, .stWarning, .stInfo {
         border-radius: 14px !important;
-        padding: 18px 20px !important;
+        padding: 8px 12px !important;
         font-weight: 500 !important;
-        font-size: 14px !important;
+        font-size: 13px !important;
         animation: slideInRight 0.4s ease-out;
     }
 
@@ -416,6 +432,15 @@ st.markdown("""
 
     [data-testid="stForm"] {
         animation: fadeInUp 1.2s ease-out;
+    }
+
+    /* O Streamlit compensa a margem de 16px dos parágrafos com -16px no container; como a margem foi reduzida, zera a compensação */
+    [data-testid="stMarkdownContainer"] {
+        margin-bottom: 0 !important;
+    }
+
+    [data-testid="stAlertContainer"] p {
+        margin-bottom: 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -795,7 +820,6 @@ elif pagina == "Modelo Clínico":
     if st.session_state.perfil_preenchido:
         st.success(f"Usando dados do perfil: {st.session_state.perfil_nome} | Idade: {st.session_state.perfil_idade} anos | IMC: {st.session_state.perfil_imc:.1f}")
     
-    st.info("**Preencha os dados dos exames laboratoriais abaixo:**")
     
     col1, col2, col3, col4 = st.columns(4)
 
@@ -860,38 +884,36 @@ elif pagina == "Modelo Clínico":
         
         st.markdown("---")
         st.markdown("## Resultado da Análise")
-        
-        if predicao == 1:
-            st.markdown(f"""
-            <div class="result-high">
-                <h3>RISCO ELEVADO DE DIABETES</h3>
-                <p class='prob'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
-                <p>Baseado nos exames, o modelo identifica risco elevado.</p>
-                <p><strong>Recomendações:</strong></p>
-                <ul>
-                    <li>Consulte endocrinologista</li>
-                    <li>Repita exames de glicemia e HbA1c</li>
-                    <li>Inicie mudanças no estilo de vida</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="result-low">
-                <h3>RISCO BAIXO DE DIABETES</h3>
-                <p class='prob'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
-                <p>Baseado nos exames, o modelo não identifica risco elevado.</p>
-                <p><strong>Recomendações:</strong></p>
-                <ul>
-                    <li>Mantenha hábitos saudáveis</li>
-                    <li>Faça check-ups regulares</li>
-                    <li>Monitore glicemia anualmente</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("### Medidor de Risco Visual")
-        _, col_gauge, _ = st.columns([1, 2, 1])
+        col_res, col_gauge = st.columns([3, 2], vertical_alignment="center")
+        with col_res:
+            if predicao == 1:
+                st.markdown(f"""
+                <div class="result-high">
+                    <h3>RISCO ELEVADO DE DIABETES</h3>
+                    <p class='prob'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
+                    <p>Baseado nos exames, o modelo identifica risco elevado.</p>
+                    <p><strong>Recomendações:</strong></p>
+                    <ul>
+                        <li>Consulte endocrinologista</li>
+                        <li>Repita exames de glicemia e HbA1c</li>
+                        <li>Inicie mudanças no estilo de vida</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="result-low">
+                    <h3>RISCO BAIXO DE DIABETES</h3>
+                    <p class='prob'><strong>Probabilidade: {probabilidade*100:.1f}%</strong></p>
+                    <p>Baseado nos exames, o modelo não identifica risco elevado.</p>
+                    <p><strong>Recomendações:</strong></p>
+                    <ul>
+                        <li>Mantenha hábitos saudáveis</li>
+                        <li>Faça check-ups regulares</li>
+                        <li>Monitore glicemia anualmente</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
         with col_gauge:
             st.image(criar_gauge_risco(probabilidade, threshold=meta_clinico['threshold']), width="stretch")
 
@@ -988,8 +1010,7 @@ elif pagina == "Modelo Clínico":
             recomendacoes.append("**Mantenha exercício:** 150 min/semana mantém sensibilidade à insulina")
             recomendacoes.append("**Dieta preventiva:** Reduza açúcar, refrigerantes e carboidratos refinados")
 
-        for rec in recomendacoes:
-            st.markdown(f"- {rec}")
+        st.markdown("\n".join(f"- {rec}" for rec in recomendacoes))
 
         if st.session_state.perfil_alergias:
             st.warning(f"**ATENÇÃO - Alergias:** {st.session_state.perfil_alergias}\n\nInforme ao médico antes de QUALQUER medicação!")
@@ -1046,7 +1067,6 @@ elif pagina == "Modelo Comportamental":
     st.markdown('<div class="main-header">Modelo Comportamental (BRFSS)</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Predição baseada em hábitos de vida (SEM exames)</div>', unsafe_allow_html=True)
     
-    st.info("**Preencha o questionário sobre seus hábitos:**")
     
     opcoes_saude = ["Excelente", "Muito boa", "Boa", "Razoável", "Ruim"]
     col1, col2, col3, col4 = st.columns(4)
@@ -1107,36 +1127,34 @@ elif pagina == "Modelo Comportamental":
         
         st.markdown("---")
         st.markdown("## Resultado")
-        
-        if predicao == 1:
-            st.markdown(f"""
-            <div class="result-high">
-                <h3>RISCO ELEVADO</h3>
-                <p class='prob'><strong>{probabilidade*100:.1f}%</strong></p>
-                <p>Baseado nos hábitos, risco elevado identificado.</p>
-                <ul>
-                    <li>Procure médico para exames</li>
-                    <li>Aumente atividade física</li>
-                    <li>Melhore alimentação</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="result-low">
-                <h3>RISCO BAIXO</h3>
-                <p class='prob'><strong>{probabilidade*100:.1f}%</strong></p>
-                <p>Baseado nos hábitos, risco baixo.</p>
-                <ul>
-                    <li>Mantenha bons hábitos!</li>
-                    <li>Continue exercícios</li>
-                    <li>Check-ups anuais</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("### Medidor de Risco Visual")
-        _, col_gauge, _ = st.columns([1, 2, 1])
+        col_res, col_gauge = st.columns([3, 2], vertical_alignment="center")
+        with col_res:
+            if predicao == 1:
+                st.markdown(f"""
+                <div class="result-high">
+                    <h3>RISCO ELEVADO</h3>
+                    <p class='prob'><strong>{probabilidade*100:.1f}%</strong></p>
+                    <p>Baseado nos hábitos, risco elevado identificado.</p>
+                    <ul>
+                        <li>Procure médico para exames</li>
+                        <li>Aumente atividade física</li>
+                        <li>Melhore alimentação</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="result-low">
+                    <h3>RISCO BAIXO</h3>
+                    <p class='prob'><strong>{probabilidade*100:.1f}%</strong></p>
+                    <p>Baseado nos hábitos, risco baixo.</p>
+                    <ul>
+                        <li>Mantenha bons hábitos!</li>
+                        <li>Continue exercícios</li>
+                        <li>Check-ups anuais</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
         with col_gauge:
             st.image(criar_gauge_risco(probabilidade, threshold=meta_comp['threshold']), width="stretch")
 
