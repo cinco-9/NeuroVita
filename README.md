@@ -21,6 +21,12 @@ Autor: David Reis · 2026
 - **Resultado** com probabilidade, medidor visual, fatores de risco identificados e recomendações.
 - **Relatório em PDF** para levar ao médico.
 - **Histórico** das avaliações de cada usuário.
+- **Diário de saúde**: alimentação (busca na tabela TACO com medidas caseiras, ou leitura do código de barras de produtos
+  via [Open Food Facts](https://world.openfoodfacts.org), com cadastro manual do rótulo quando o produto não é encontrado),
+  atividade física, glicemia, peso, pressão, sono, sintomas e hábitos; resumo do dia, alertas (limites da SBD/ADA) e
+  gráficos de evolução.
+- **Acesso do médico**: contas do tipo médico (com CRM) veem, só para leitura, perfil, avaliações e diário dos pacientes
+  que compartilharem os dados com eles; o paciente pode revogar a qualquer momento.
 - **Privacidade (LGPD)**: termo de consentimento no cadastro, cada usuário só acessa os próprios dados (RLS no Supabase) e pode excluir a conta com todos os dados pelo próprio app.
 
 ## Modelos
@@ -97,7 +103,8 @@ RECUPERACAO_SENHA_ATIVA=1
 CONTATO_PRIVACIDADE=
 ```
 
-No Supabase SQL Editor, rode `create_table.sql`, `create_users_table.sql` e `privacidade_lgpd.sql`, nessa ordem.
+No Supabase SQL Editor, rode `create_table.sql`, `create_users_table.sql`, `privacidade_lgpd.sql` e
+`diario_medico.sql`, nessa ordem.
 
 ```bash
 python -m streamlit run app_diabetes.py

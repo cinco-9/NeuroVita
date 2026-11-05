@@ -25,6 +25,9 @@ warnings.filterwarnings('ignore')
 from supabase_db import db as supabase_db
 from auth import auth, SENHA_MINIMA
 from privacidade import TERMO_PRIVACIDADE
+import diario
+import medico
+from medico import UFS
 from pdf_generator import gerar_relatorio_predicao
 # from shap_explicabilidade import criar_grafico_barras_shap, obter_top_features_shap  # Desabilitado - muito pesado
 from gauge_component import criar_gauge_risco
@@ -512,6 +515,12 @@ if 'perfil_medicacoes' not in st.session_state:
     st.session_state.perfil_medicacoes = ""
 if 'perfil_preenchido' not in st.session_state:
     st.session_state.perfil_preenchido = False
+if 'perfil_tipo_conta' not in st.session_state:
+    st.session_state.perfil_tipo_conta = "paciente"
+if 'perfil_crm' not in st.session_state:
+    st.session_state.perfil_crm = ""
+if 'perfil_crm_uf' not in st.session_state:
+    st.session_state.perfil_crm_uf = ""
 
 # ============================================================================
 # VERIFICAÇÃO DE AUTENTICAÇÃO
@@ -622,10 +631,22 @@ if not auth.is_logged_in():
             with st.expander("Ler Termo de Consentimento e Política de Privacidade"):
                 st.markdown(TERMO_PRIVACIDADE)
 
+            if 'cadastro_msg' in st.session_state:
+                st.success(st.session_state.pop('cadastro_msg'))
+
+            st.markdown("#### Crie sua conta gratuitamente")
+            # Fora do form para os campos de CRM aparecerem assim que "Médico" for escolhido
+            tipo_conta_cadastro = st.radio("Tipo de conta", ["Paciente", "Médico"], horizontal=True,
+                                           key="tipo_conta_cadastro")
+
             with st.form("signup_form"):
-                st.markdown("#### Crie sua conta gratuitamente")
                 st.text_input("Nome Completo", key="nome_cadastro", placeholder="Seu nome completo")
                 st.text_input("Email", key="email_cadastro", placeholder="seu@email.com")
+
+                if tipo_conta_cadastro == "Médico":
+                    col_crm, col_uf = st.columns([2, 1])
+                    col_crm.text_input("CRM", key="crm_cadastro", max_chars=10, placeholder="Somente números")
+                    col_uf.selectbox("UF", UFS, key="crm_uf_cadastro", index=UFS.index("SP"))
 
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
@@ -649,8 +670,13 @@ if not auth.is_logged_in():
                     senha_cadastro = st.session_state.senha_cadastro
                     senha_confirma = st.session_state.senha_confirma
 
+                    e_medico = tipo_conta_cadastro == "Médico"
+                    crm_cadastro = st.session_state.get('crm_cadastro', '').strip() if e_medico else ''
+
                     if not email_cadastro or not senha_cadastro or not nome_cadastro:
                         st.error("Por favor, preencha todos os campos")
+                    elif e_medico and not crm_cadastro.isdigit():
+                        st.error("Informe o número do CRM (somente números)")
                     elif not st.session_state.aceite_termo_cadastro:
                         st.error("Para criar a conta, é preciso aceitar o Termo de Consentimento")
                     elif senha_cadastro != senha_confirma:
@@ -659,12 +685,20 @@ if not auth.is_logged_in():
                         st.error(f"Senha deve ter no mínimo {SENHA_MINIMA} caracteres")
                     else:
                         with st.spinner("Criando conta..."):
-                            sucesso, mensagem = auth.signup(email_cadastro, senha_cadastro, nome_cadastro)
-                            if sucesso:
-                                st.success(mensagem)
-                                st.rerun()
-                            else:
-                                st.error(mensagem)
+                            sucesso, mensagem = auth.signup(
+                                email_cadastro, senha_cadastro, nome_cadastro,
+                                tipo_conta='medico' if e_medico else 'paciente',
+                                crm=crm_cadastro,
+                                crm_uf=st.session_state.get('crm_uf_cadastro', '') if e_medico else '',
+                            )
+                        if sucesso:
+                            # Com confirmação de email não há login ainda: a mensagem precisa
+                            # sobreviver ao rerun para a pessoa saber que deve abrir o email
+                            if not auth.is_logged_in():
+                                st.session_state.cadastro_msg = mensagem
+                            st.rerun()
+                        else:
+                            st.error(mensagem)
 
 
         # Footer
@@ -743,6 +777,8 @@ else:
     nome_exibir = auth.get_user_email().split('@')[0]
 
 st.sidebar.success(f"**{nome_exibir}**")
+if st.session_state.perfil_tipo_conta == "medico":
+    st.sidebar.caption("Conta de médico")
 
 if st.sidebar.button("Sair", width="stretch"):
     auth.logout()
@@ -751,9 +787,13 @@ if st.sidebar.button("Sair", width="stretch"):
 st.sidebar.markdown("---")
 
 # Navegação
+e_medico = st.session_state.perfil_tipo_conta == "medico"
+paginas = ["Início"]
+paginas += ["Meus Pacientes"] if e_medico else ["Meu Diário"]
+paginas += ["Meu Perfil", "Modelo Clínico", "Modelo Comportamental", "Comparação", "Histórico & Estatísticas"]
 pagina = st.sidebar.radio(
     "Navegação",
-    ["Início", "Meu Perfil", "Modelo Clínico", "Modelo Comportamental", "Comparação", "Histórico & Estatísticas"]
+    paginas
 )
 
 st.sidebar.markdown("---")
@@ -820,6 +860,20 @@ if pagina == "Início":
 
 
 # ============================================================================
+# PÁGINAS DO DIÁRIO (paciente) E MEUS PACIENTES (médico)
+# ============================================================================
+
+elif pagina == "Meu Diário":
+    st.markdown('<div class="main-header">Meu Diário</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Registre sua rotina: alimentação, atividade física, glicemia e mais</div>',
+                unsafe_allow_html=True)
+    diario.mostrar_diario(auth.get_user_id())
+
+elif pagina == "Meus Pacientes":
+    medico.pagina_meus_pacientes(auth.get_user_id())
+
+
+# ============================================================================
 # PÁGINA MEU PERFIL
 # ============================================================================
 
@@ -853,8 +907,27 @@ elif pagina == "Meu Perfil":
                             placeholder="Ex: Penicilina, Frutos do mar...")
     medicacoes = st.text_area("Medicações Atuais", value=st.session_state.perfil_medicacoes,
                               placeholder="Ex: Metformina 500mg...")
-    
-    if st.button("Salvar Perfil", type="primary", width="stretch"):
+
+    st.markdown("### Tipo de Conta")
+    tipos_conta = {"paciente": "Paciente", "medico": "Médico"}
+    tipo_conta = st.radio("Tipo de conta", list(tipos_conta), format_func=tipos_conta.get, horizontal=True,
+                          index=list(tipos_conta).index(st.session_state.perfil_tipo_conta),
+                          label_visibility="collapsed",
+                          help="Médicos podem acompanhar pacientes que compartilharem os dados com eles.")
+    crm, crm_uf = "", ""
+    if tipo_conta == "medico":
+        col_crm, col_uf = st.columns([2, 1])
+        crm = col_crm.text_input("CRM", value=st.session_state.perfil_crm, max_chars=10).strip()
+        uf_atual = st.session_state.perfil_crm_uf
+        crm_uf = col_uf.selectbox("UF do CRM", UFS, index=UFS.index(uf_atual) if uf_atual in UFS else UFS.index("SP"))
+
+    if 'perfil_msg' in st.session_state:
+        st.success(st.session_state.pop('perfil_msg'))
+
+    salvar = st.button("Salvar Perfil", type="primary", width="stretch")
+    if salvar and tipo_conta == "medico" and not crm.isdigit():
+        st.error("Informe o número do CRM (somente números)")
+    elif salvar:
         st.session_state.perfil_nome = nome
         st.session_state.perfil_idade = idade
         st.session_state.perfil_sexo = sexo
@@ -865,13 +938,26 @@ elif pagina == "Meu Perfil":
         st.session_state.perfil_hist_familiar = hist_familiar
         st.session_state.perfil_medicacoes = medicacoes
         st.session_state.perfil_preenchido = True
-        
-        sucesso, msg_bd = auth.salvar_perfil(nome, idade, sexo, altura, peso, imc, alergias, hist_familiar, medicacoes)
-        
+
+        sucesso, msg_bd = auth.salvar_perfil(nome, idade, sexo, altura, peso, imc, alergias, hist_familiar,
+                                             medicacoes, tipo_conta, crm, crm_uf)
+
         if sucesso:
+            mudou_tipo = tipo_conta != st.session_state.perfil_tipo_conta
+            st.session_state.perfil_tipo_conta = tipo_conta
+            st.session_state.perfil_crm = crm
+            st.session_state.perfil_crm_uf = crm_uf
+            if mudou_tipo:
+                # O menu lateral depende do tipo de conta
+                st.session_state.perfil_msg = "Perfil salvo com sucesso!"
+                st.rerun()
             st.success("Perfil salvo com sucesso!")
         else:
             st.warning(f"Perfil salvo localmente. Erro no banco: {msg_bd}")
+
+    if not e_medico:
+        st.markdown("---")
+        medico.secao_compartilhamento(auth.get_user_id())
 
     st.markdown("---")
     st.markdown("### Privacidade e Dados")

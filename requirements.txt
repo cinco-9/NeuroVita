@@ -17,6 +17,10 @@ streamlit<2.0
 supabase<3.0
 python-dotenv
 
+# Diário: leitura de código de barras e consulta ao Open Food Facts
+zxing-cpp>=2.2,<4.0
+httpx<1.0
+
 # PDF (leve)
 reportlab<5.0
 

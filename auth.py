@@ -168,7 +168,8 @@ class Auth:
                 return False, "Não foi possível fazer login. Tente novamente mais tarde."
 
     @staticmethod
-    def signup(email: str, password: str, nome: str = "") -> tuple[bool, str]:
+    def signup(email: str, password: str, nome: str = "", tipo_conta: str = "paciente",
+               crm: str = "", crm_uf: str = "") -> tuple[bool, str]:
         """
         Cadastra novo usuário
 
@@ -179,28 +180,26 @@ class Auth:
             return False, "Erro: Supabase não está conectado"
 
         try:
-            # Criar usuário
-            # Só é chamado depois do aceite do termo; o registro fica nos metadados do usuário
+            # Só é chamado depois do aceite do termo; o registro fica nos metadados do usuário.
+            # O perfil (nome, tipo de conta, CRM) é criado no banco pelo trigger
+            # criar_perfil_novo_usuario (diario_medico.sql) a partir destes metadados.
             response = supabase_db.client.auth.sign_up({
                 "email": email,
                 "password": password,
-                "options": {"data": Auth._dados_consentimento()},
+                "options": {"data": {
+                    **Auth._dados_consentimento(),
+                    'nome': nome,
+                    'tipo_conta': tipo_conta,
+                    'crm': crm,
+                    'crm_uf': crm_uf,
+                }},
             })
 
             if response.user:
                 # Fazer login automático (se não precisar confirmar email)
                 if response.session:
                     Auth._iniciar_sessao(response.user, response.session)
-
-                    # Criar perfil inicial
-                    if nome:
-                        try:
-                            supabase_db.client.table('user_profiles').insert({
-                                'id': response.user.id,
-                                'nome': nome
-                            }).execute()
-                        except:
-                            pass  # Perfil pode ser criado depois
+                    Auth.carregar_perfil()
 
                     return True, "Cadastro realizado com sucesso!"
                 else:
@@ -285,7 +284,7 @@ class Auth:
         keys_to_clear = [
             'perfil_nome', 'perfil_idade', 'perfil_sexo', 'perfil_altura',
             'perfil_peso', 'perfil_imc', 'perfil_alergias', 'perfil_hist_familiar',
-            'perfil_medicacoes', 'perfil_preenchido'
+            'perfil_medicacoes', 'perfil_preenchido', 'perfil_tipo_conta', 'perfil_crm', 'perfil_crm_uf'
         ]
         for key in keys_to_clear:
             if key in st.session_state:
@@ -316,6 +315,9 @@ class Auth:
                     st.session_state.perfil_alergias = perfil.get('alergias') or ''
                     st.session_state.perfil_hist_familiar = 'Sim' if perfil.get('hist_familiar_diabetes') else 'Não'
                     st.session_state.perfil_medicacoes = perfil.get('medicacoes') or ''
+                    st.session_state.perfil_tipo_conta = perfil.get('tipo_conta') or 'paciente'
+                    st.session_state.perfil_crm = perfil.get('crm') or ''
+                    st.session_state.perfil_crm_uf = perfil.get('crm_uf') or ''
                     st.session_state.perfil_preenchido = True
 
                     return True
@@ -326,7 +328,8 @@ class Auth:
 
     @staticmethod
     def salvar_perfil(nome: str, idade: int, sexo: str, altura: float, peso: float,
-                     imc: float, alergias: str, hist_familiar: str, medicacoes: str) -> tuple[bool, str]:
+                     imc: float, alergias: str, hist_familiar: str, medicacoes: str,
+                     tipo_conta: str = 'paciente', crm: str = '', crm_uf: str = '') -> tuple[bool, str]:
         """Salva perfil do usuário no banco"""
         user_id = Auth.get_user_id()
         if not user_id:
@@ -347,7 +350,10 @@ class Auth:
                     'imc': imc,
                     'alergias': alergias,
                     'hist_familiar_diabetes': (hist_familiar == 'Sim'),
-                    'medicacoes': medicacoes
+                    'medicacoes': medicacoes,
+                    'tipo_conta': tipo_conta,
+                    'crm': crm or None,
+                    'crm_uf': crm_uf or None,
                 }
 
                 # Tentar inserir ou atualizar
