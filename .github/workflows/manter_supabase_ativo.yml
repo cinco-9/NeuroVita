@@ -22,7 +22,7 @@ jobs:
             echo "Faltam os secrets SUPABASE_URL e SUPABASE_KEY"; exit 1
           fi
           status=$(curl -s -o /dev/null -w "%{http_code}" \
-            "$SUPABASE_URL/rest/v1/predicoes?select=id&limit=1" \
+            "$SUPABASE_URL/rest/v1/compartilhamentos?select=id&limit=1" \
             -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
           echo "Resposta do Supabase: $status"
           [ "$status" = "200" ]
