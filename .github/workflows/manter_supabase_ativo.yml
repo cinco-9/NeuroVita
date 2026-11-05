@@ -18,11 +18,19 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+          # Valores colados na caixa do GitHub podem vir com espaço ou quebra de linha no fim
+          url=$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]')
+          url=${url%/}
+          chave=$(printf '%s' "$SUPABASE_KEY" | tr -d '[:space:]')
+          if [ -z "$url" ] || [ -z "$chave" ]; then
             echo "Faltam os secrets SUPABASE_URL e SUPABASE_KEY"; exit 1
           fi
-          status=$(curl -s -o /dev/null -w "%{http_code}" \
-            "$SUPABASE_URL/rest/v1/compartilhamentos?select=id&limit=1" \
-            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
+          case "$url" in
+            https://*.supabase.co) ;;
+            *) echo "SUPABASE_URL deveria ter o formato https://<projeto>.supabase.co (tamanho lido: ${#url})"; exit 1 ;;
+          esac
+          status=$(curl -sS -o /dev/null -w "%{http_code}" \
+            "$url/rest/v1/compartilhamentos?select=id&limit=1" \
+            -H "apikey: $chave" -H "Authorization: Bearer $chave")
           echo "Resposta do Supabase: $status"
           [ "$status" = "200" ]
