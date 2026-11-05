@@ -424,10 +424,10 @@ def escala_risco(probabilidade, threshold):
     return escala(probabilidade * 100, [(threshold * 100, "var(--success)"), (100, "var(--danger)")], 0, 100, [])
 
 
-def cartao_resultado(probabilidade, threshold, predicao, significado):
+def cartao_resultado(probabilidade, threshold, predicao, significado, titulo="Seu resultado"):
     etiqueta = lozenge("Risco elevado", "danger") if predicao else lozenge("Risco baixo", "success")
     st.markdown(f"""<div class="card">
-<div class="card-row"><span class="card-title">Seu resultado</span>{etiqueta}</div>
+<div class="card-row"><span class="card-title">{titulo}</span>{etiqueta}</div>
 <span class="risco-prob">{formatar_pct(probabilidade)}</span>
 <span class="card-note">de probabilidade estimada pelo modelo</span>
 {escala_risco(probabilidade, threshold)}
@@ -437,7 +437,7 @@ def cartao_resultado(probabilidade, threshold, predicao, significado):
 </div>""", unsafe_allow_html=True)
 
 
-def lista_fatores(fatores, titulo="Seus valores comparados ao normal"):
+def lista_fatores(fatores, titulo="Valores comparados ao normal"):
     """fatores: lista de (nome, explicação, rótulo do lozenge, tipo do lozenge)"""
     linhas = "".join(
         f'<div class="fator"><span class="estado {tipo}">{SIMBOLO_ESTADO[tipo]}</span>'
@@ -789,11 +789,24 @@ if not auth.consentimento_em_dia():
 e_medico = st.session_state.perfil_tipo_conta == "medico"
 
 # (chave da página, rótulo no menu, ícone)
+# O médico acompanha pacientes: não tem diário nem histórico próprio, e usa as avaliações como
+# calculadoras na consulta, sem salvar o resultado
 MENU = [
     ("Principal", [
+        ("Início", "Painel", ":material/dashboard:"),
+        ("Meus Pacientes", "Meus pacientes", ":material/groups:"),
+    ]),
+    ("Ferramentas", [
+        ("Modelo Clínico", "Calculadora com exames", ":material/biotech:"),
+        ("Modelo Comportamental", "Questionário de triagem", ":material/assignment:"),
+    ]),
+    ("Sobre", [
+        ("Comparação", "Sobre os modelos", ":material/info:"),
+    ]),
+] if e_medico else [
+    ("Principal", [
         ("Início", "Início", ":material/home:"),
-        ("Meus Pacientes", "Meus pacientes", ":material/groups:") if e_medico
-        else ("Meu Diário", "Meu diário", ":material/menu_book:"),
+        ("Meu Diário", "Meu diário", ":material/menu_book:"),
         ("Histórico & Estatísticas", "Histórico", ":material/history:"),
     ]),
     ("Avaliações", [
@@ -894,10 +907,27 @@ else:
     estilo_troca.markdown("")
 
 # ============================================================================
+# PÁGINAS DAS AVALIAÇÕES
+# Para o paciente, os campos começam com os dados do perfil e o resultado vai para o histórico.
+# Para o médico são calculadoras de consulta: campos neutros, nada é salvo e os textos falam
+# do paciente na terceira pessoa.
+# ============================================================================
+
+usar_perfil = not e_medico
+idade_inicial = int(st.session_state.perfil_idade) if usar_perfil and st.session_state.perfil_idade >= 18 else 30
+imc_inicial = st.session_state.perfil_imc if usar_perfil and st.session_state.perfil_imc > 0 else 25.0
+sexo_inicial = 0 if not usar_perfil or st.session_state.perfil_sexo == "Masculino" else 1
+hist_familiar_avaliado = st.session_state.perfil_hist_familiar if usar_perfil else "Não"
+quem = "o paciente" if e_medico else "você"
+
+# ============================================================================
 # PÁGINA INÍCIO
 # ============================================================================
 
-if pagina == "Início":
+if pagina == "Início" and e_medico:
+    medico.painel_medico(auth.get_user_id(), nome_exibir.split()[0])
+
+elif pagina == "Início":
     try:
         predicoes_recentes = supabase_db.obter_ultimas_predicoes(limite=5, user_id=auth.get_user_id())
     except Exception:
@@ -1153,14 +1183,20 @@ elif pagina == "Meu Perfil":
 # ============================================================================
 
 elif pagina == "Modelo Clínico":
-    cabecalho("Exames laboratoriais", "Estimativa de risco a partir de exames de sangue e medidas clínicas.",
-              eyebrow="Avaliações")
+    if e_medico:
+        cabecalho("Calculadora com exames", "Estime o risco de um paciente durante a consulta. "
+                  "O resultado não é salvo.", eyebrow="Ferramentas")
+    else:
+        cabecalho("Exames laboratoriais", "Estimativa de risco a partir de exames de sangue e medidas clínicas.",
+                  eyebrow="Avaliações")
 
     st.info("Informe a **glicemia do TOTG 2h** (2 horas após tomar glicose), não a de jejum, e a pressão "
-            "**diastólica** (o número de baixo). Insulina e dobra cutânea podem ficar em 0 se você não tiver.")
+            f"**diastólica** (o número de baixo). Insulina e dobra cutânea podem ficar em 0 se {quem} não tiver.")
 
     with st.container(border=True, key="card_form_clinico"):
-        if st.session_state.perfil_preenchido:
+        if e_medico:
+            nome_relatorio = st.text_input("Nome do paciente (opcional, só aparece no PDF)")
+        elif st.session_state.perfil_preenchido and st.session_state.perfil_imc > 0:
             st.caption(f"Idade e IMC vêm do seu perfil ({st.session_state.perfil_idade} anos, "
                        f"IMC {num(st.session_state.perfil_imc)}).")
         col1, col2, col3, col4 = st.columns(4)
@@ -1169,10 +1205,8 @@ elif pagina == "Modelo Clínico":
                                          "Não é a glicemia de jejum.")
         blood_pressure = col2.number_input("Pressão diastólica (mm Hg)", min_value=0, max_value=150, value=80,
                                            help="O número de baixo da pressão. Ex.: em 120/80, informe 80.")
-        bmi = col3.number_input("IMC", min_value=10.0, max_value=70.0,
-                                value=st.session_state.perfil_imc if st.session_state.perfil_imc > 0 else 25.0, step=0.1)
-        age = col4.number_input("Idade (anos)", min_value=18, max_value=120,
-                                value=max(18, int(st.session_state.perfil_idade)))
+        bmi = col3.number_input("IMC", min_value=10.0, max_value=70.0, value=imc_inicial, step=0.1)
+        age = col4.number_input("Idade (anos)", min_value=18, max_value=120, value=idade_inicial)
         insulin = col1.number_input("Insulina sérica (µU/ml)", min_value=0, max_value=900, value=80,
                                     help="Deixe 0 se não tiver esse exame.")
         skin_thickness = col2.number_input("Dobra cutânea (mm)", min_value=0, max_value=100, value=20,
@@ -1203,21 +1237,22 @@ elif pagina == "Modelo Clínico":
             st.error(f"Não foi possível executar o modelo clínico: {e}")
             st.stop()
 
-        # Salvar no banco
-        try:
-            supabase_db.salvar_predicao(
-                user_id=auth.get_user_id(),
-                tipo_modelo='clinico',
-                probabilidade=float(probabilidade),
-                resultado=int(predicao),
-                dados_input={
-                    'glucose': glucose, 'bmi': bmi, 'age': age,
-                    'insulin': insulin, 'blood_pressure': blood_pressure
-                },
-                session_id=st.session_state.session_id,
-            )
-        except Exception as e:
-            print(f"Erro ao salvar: {e}")
+        # Salvar no banco (só a avaliação do próprio paciente)
+        if not e_medico:
+            try:
+                supabase_db.salvar_predicao(
+                    user_id=auth.get_user_id(),
+                    tipo_modelo='clinico',
+                    probabilidade=float(probabilidade),
+                    resultado=int(predicao),
+                    dados_input={
+                        'glucose': glucose, 'bmi': bmi, 'age': age,
+                        'insulin': insulin, 'blood_pressure': blood_pressure
+                    },
+                    session_id=st.session_state.session_id,
+                )
+            except Exception as e:
+                print(f"Erro ao salvar: {e}")
 
         # Limites do TOTG 2h: < 140 normal, 140-199 tolerância diminuída, >= 200 faixa de diabetes
         if glucose >= 200:
@@ -1264,7 +1299,7 @@ elif pagina == "Modelo Clínico":
             elif bmi >= 25:
                 recomendacoes.append("**Sobrepeso:** Objetivo IMC < 25 - dieta + exercícios")
 
-            if st.session_state.perfil_hist_familiar == "Sim":
+            if hist_familiar_avaliado == "Sim":
                 recomendacoes.append("**Histórico familiar:** Com exames alterados, faça acompanhamento médico mais frequente")
 
             if blood_pressure >= 90:
@@ -1287,7 +1322,7 @@ elif pagina == "Modelo Clínico":
             else:
                 recomendacoes.append("**Peso ideal:** Continue assim! Peso saudável é sua melhor proteção")
 
-            if st.session_state.perfil_hist_familiar == "Sim":
+            if hist_familiar_avaliado == "Sim":
                 recomendacoes.append("**Histórico familiar:** Mesmo com exames normais, monitore a glicemia uma vez por ano")
 
             if age < 40:
@@ -1299,12 +1334,17 @@ elif pagina == "Modelo Clínico":
         st.markdown("### Resultado")
         col_res, col_fat = st.columns(2)
         with col_res:
-            cartao_resultado(probabilidade, meta_clinico['threshold'], predicao,
-                             "Seus exames se parecem com os de pessoas que têm diabetes. Isso <b>não é um "
-                             "diagnóstico</b>: procure um médico para confirmar com novos exames."
-                             if predicao else
-                             "Seus exames não mostram sinais de risco elevado de diabetes. Continue se cuidando "
-                             "e repita os exames uma vez por ano.")
+            if e_medico:
+                significado = ("Os valores se parecem com os de pacientes com diabetes na base de treino. Não é "
+                               "diagnóstico: confirme com glicemia de jejum, HbA1c ou TOTG." if predicao else
+                               "Os valores informados ficam abaixo do limiar do modelo para risco elevado.")
+            else:
+                significado = ("Seus exames se parecem com os de pessoas que têm diabetes. Isso <b>não é um "
+                               "diagnóstico</b>: procure um médico para confirmar com novos exames." if predicao else
+                               "Seus exames não mostram sinais de risco elevado de diabetes. Continue se cuidando "
+                               "e repita os exames uma vez por ano.")
+            cartao_resultado(probabilidade, meta_clinico['threshold'], predicao, significado,
+                             titulo="Resultado" if e_medico else "Seu resultado")
         with col_fat:
             lista_fatores(fatores)
 
@@ -1318,19 +1358,19 @@ elif pagina == "Modelo Clínico":
         with st.container(border=True, key="card_recomendacoes_clinico"):
             st.markdown('<span class="card-title">Recomendações</span>', unsafe_allow_html=True)
             st.markdown("\n".join(f"- {rec}" for rec in recomendacoes))
-            if st.session_state.perfil_alergias:
+            if usar_perfil and st.session_state.perfil_alergias:
                 st.warning(f"**Alergias:** {st.session_state.perfil_alergias}. Informe ao médico antes de qualquer medicação.")
 
             try:
                 pdf_path = gerar_relatorio_predicao(
                     nome_arquivo=os.path.join(tempfile.gettempdir(), f"relatorio_{uuid.uuid4().hex}.pdf"),
-                    nome_paciente=st.session_state.perfil_nome or "Paciente",
+                    nome_paciente=(nome_relatorio.strip() if e_medico else st.session_state.perfil_nome) or "Paciente",
                     tipo_modelo="Clínico",
                     resultado=predicao,
                     probabilidade=probabilidade,
                     dados_paciente={
                         'Idade': age,
-                        'Sexo': st.session_state.perfil_sexo,
+                        'Sexo': st.session_state.perfil_sexo if usar_perfil else "Não informado",
                         'Glicemia (mg/dL)': glucose,
                         'Insulina (µU/ml)': insulin,
                         'Pressão Arterial (mm Hg)': blood_pressure,
@@ -1345,7 +1385,7 @@ elif pagina == "Modelo Clínico":
 
                 with open(pdf_path, 'rb') as f:
                     st.download_button(
-                        label="Baixar relatório em PDF para levar ao médico",
+                        label="Baixar relatório em PDF" + ("" if e_medico else " para levar ao médico"),
                         data=f,
                         file_name=f"relatorio_diabetes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                         mime="application/pdf",
@@ -1361,21 +1401,23 @@ elif pagina == "Modelo Clínico":
 # ============================================================================
 
 elif pagina == "Modelo Comportamental":
-    cabecalho("Questionário rápido", "Estimativa de risco a partir de hábitos e condições de saúde, sem exames.",
-              eyebrow="Avaliações")
+    if e_medico:
+        cabecalho("Questionário de triagem", "Estime o risco de um paciente sem exames, durante a consulta. "
+                  "O resultado não é salvo.", eyebrow="Ferramentas")
+    else:
+        cabecalho("Questionário rápido", "Estimativa de risco a partir de hábitos e condições de saúde, sem exames.",
+                  eyebrow="Avaliações")
     st.caption("Estima o risco de **pré-diabetes ou diabetes**: na base usada (BRFSS 2015) os dois são agrupados, "
                "e o diagnóstico é autorreferido pelos entrevistados.")
 
     opcoes_saude = ["Excelente", "Muito boa", "Boa", "Razoável", "Ruim"]
     with st.container(border=True, key="card_form_comportamental"):
         col1, col2, col3, col4 = st.columns(4)
-        idade_brfss = col1.number_input("Idade (anos)", min_value=18, max_value=120,
-                                        value=int(st.session_state.perfil_idade) if st.session_state.perfil_idade >= 18 else 30)
-        sexo_brfss = col2.selectbox("Sexo", ["Masculino", "Feminino"],
-                                    index=0 if st.session_state.perfil_sexo == "Masculino" else 1)
-        bmi_brfss = col3.number_input("IMC", min_value=10.0, max_value=70.0,
-                                      value=st.session_state.perfil_imc if st.session_state.perfil_imc > 0 else 25.0)
-        gen_health = col4.selectbox("Como você avalia sua saúde?", opcoes_saude, index=2)
+        idade_brfss = col1.number_input("Idade (anos)", min_value=18, max_value=120, value=idade_inicial)
+        sexo_brfss = col2.selectbox("Sexo", ["Masculino", "Feminino"], index=sexo_inicial)
+        bmi_brfss = col3.number_input("IMC", min_value=10.0, max_value=70.0, value=imc_inicial)
+        gen_health = col4.selectbox("Saúde autoavaliada pelo paciente" if e_medico else "Como você avalia sua saúde?",
+                                    opcoes_saude, index=2)
         high_bp = col1.selectbox("Pressão alta?", ["Não", "Sim"])
         high_chol = col2.selectbox("Colesterol alto?", ["Não", "Sim"])
         phys_activity = col3.selectbox("Atividade física no último mês?", ["Não", "Sim"])
@@ -1401,40 +1443,48 @@ elif pagina == "Modelo Comportamental":
         probabilidade = prever_probabilidade(modelo_comp, meta_comp, entrada)
         predicao = 1 if probabilidade >= meta_comp['threshold'] else 0
 
-        # Salvar
-        try:
-            supabase_db.salvar_predicao(
-                user_id=auth.get_user_id(),
-                tipo_modelo='comportamental',
-                probabilidade=float(probabilidade),
-                resultado=int(predicao),
-                dados_input={
-                    'age': idade_brfss, 'sex': sexo_brfss, 'bmi': bmi_brfss, 'gen_health': gen_health,
-                    'high_bp': high_bp, 'high_chol': high_chol,
-                    'phys_activity': phys_activity, 'smoker': smoker,
-                },
-                session_id=st.session_state.session_id,
-            )
-        except Exception as e:
-            print(f"Erro: {e}")
+        # Salvar (só a avaliação do próprio paciente)
+        if not e_medico:
+            try:
+                supabase_db.salvar_predicao(
+                    user_id=auth.get_user_id(),
+                    tipo_modelo='comportamental',
+                    probabilidade=float(probabilidade),
+                    resultado=int(predicao),
+                    dados_input={
+                        'age': idade_brfss, 'sex': sexo_brfss, 'bmi': bmi_brfss, 'gen_health': gen_health,
+                        'high_bp': high_bp, 'high_chol': high_chol,
+                        'phys_activity': phys_activity, 'smoker': smoker,
+                    },
+                    session_id=st.session_state.session_id,
+                )
+            except Exception as e:
+                print(f"Erro: {e}")
 
         imc_txt, imc_tipo = faixa_imc(bmi_brfss)
         fatores = [
-            ("Pressão alta", "aumenta o risco de diabetes" if high_bp == "Sim" else "você informou que não tem",
+            ("Pressão alta", "aumenta o risco de diabetes" if high_bp == "Sim" else f"{quem} informou que não tem",
              *(("Fator de risco", "danger") if high_bp == "Sim" else ("Ok", "success"))),
-            ("Colesterol alto", "aumenta o risco de diabetes" if high_chol == "Sim" else "você informou que não tem",
+            ("Colesterol alto", "aumenta o risco de diabetes" if high_chol == "Sim" else f"{quem} informou que não tem",
              *(("Fator de risco", "danger") if high_chol == "Sim" else ("Ok", "success"))),
             ("IMC", f"{num(bmi_brfss)} · o normal vai de 18,5 a 24,9", imc_txt, imc_tipo),
             ("Atividade física", "ajuda a controlar o açúcar no sangue" if phys_activity == "Sim"
              else "ficar parado aumenta o risco",
              *(("Ativo", "success") if phys_activity == "Sim" else ("Sedentário", "warning"))),
-            ("Cigarro", "fumar aumenta o risco" if smoker == "Sim" else "você informou que não fuma",
+            ("Cigarro", "fumar aumenta o risco" if smoker == "Sim" else f"{quem} informou que não fuma",
              *(("Fumante ou ex", "warning") if smoker == "Sim" else ("Ok", "success"))),
-            ("Como você avalia sua saúde", gen_health,
+            ("Saúde autoavaliada" if e_medico else "Como você avalia sua saúde", gen_health,
              *(("Fator de risco", "warning") if gen_health in ("Razoável", "Ruim") else ("Ok", "success"))),
         ]
 
-        if predicao == 1:
+        if e_medico:
+            recomendacoes = (["**Solicitar** glicemia de jejum e HbA1c para confirmar",
+                              "**Orientar** atividade física (150 min/semana) e redução de açúcar e refinados",
+                              "Com exames em mãos, usar a **calculadora com exames**"] if predicao else
+                             ["**Rastreamento** conforme a ADA: a partir dos 35 anos, repetir a cada 3 anos "
+                              "se normal, ou antes na presença de fatores de risco",
+                              "**Reforçar** hábitos: atividade física e alimentação"])
+        elif predicao == 1:
             recomendacoes = ["**Procure um médico** e peça glicemia de jejum e HbA1c",
                              "**Atividade física:** 150 min por semana de caminhada ou equivalente",
                              "**Alimentação:** menos açúcar, refrigerantes e carboidratos refinados",
@@ -1447,12 +1497,17 @@ elif pagina == "Modelo Comportamental":
         st.markdown("### Resultado")
         col_res, col_fat = st.columns(2)
         with col_res:
-            cartao_resultado(probabilidade, meta_comp['threshold'], predicao,
-                             "Suas respostas se parecem com as de pessoas que têm pré-diabetes ou diabetes. "
-                             "Isso <b>não é um diagnóstico</b>: peça ao médico um exame de glicemia."
-                             if predicao else
-                             "Suas respostas não mostram sinais de risco elevado. Mantenha os bons hábitos "
-                             "e faça um check-up uma vez por ano.")
+            if e_medico:
+                significado = ("O perfil se parece com o de pessoas com pré-diabetes ou diabetes autorreferido no "
+                               "BRFSS. Não é diagnóstico: indica solicitar glicemia." if predicao else
+                               "As respostas ficam abaixo do limiar do modelo para risco elevado.")
+            else:
+                significado = ("Suas respostas se parecem com as de pessoas que têm pré-diabetes ou diabetes. "
+                               "Isso <b>não é um diagnóstico</b>: peça ao médico um exame de glicemia." if predicao else
+                               "Suas respostas não mostram sinais de risco elevado. Mantenha os bons hábitos "
+                               "e faça um check-up uma vez por ano.")
+            cartao_resultado(probabilidade, meta_comp['threshold'], predicao, significado,
+                             titulo="Resultado" if e_medico else "Seu resultado")
             with st.container(border=True, key="card_recomendacoes_comportamental"):
                 st.markdown('<span class="card-title">Recomendações</span>', unsafe_allow_html=True)
                 st.markdown("\n".join(f"- {rec}" for rec in recomendacoes))

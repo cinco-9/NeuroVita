@@ -493,6 +493,93 @@ def _ficha(paciente: Dict, medico_id: str, inicio, dias: int):
                 st.error("Não foi possível encerrar. Tente novamente.")
 
 
+def _abrir_ficha(paciente_id: str):
+    st.session_state.paciente_aberto = paciente_id
+    st.session_state.pagina = "Meus Pacientes"
+
+
+def _ir_para(pagina: str):
+    st.session_state.pagina = pagina
+
+
+def painel_medico(medico_id: str, primeiro_nome: str):
+    """Início da conta de médico: resumo dos pacientes e quem precisa de atenção primeiro"""
+    st.markdown(f'<div class="page-header"><span class="eyebrow">Painel</span>'
+                f'<span class="title">Olá, {primeiro_nome}</span>'
+                f'<span class="subtitle">Resumo dos pacientes que compartilham os dados com você '
+                f'(últimos 30 dias).</span></div>', unsafe_allow_html=True)
+
+    if not supabase_db.conectado or not supabase_db.client:
+        st.warning("Banco de dados indisponível.")
+        return
+    try:
+        pacientes = _rpc('meus_pacientes')
+    except Exception as e:
+        print(f"Erro ao listar pacientes: {e}")
+        st.warning("Não foi possível carregar seus pacientes agora.")
+        return
+
+    if not pacientes:
+        st.info("Nenhum paciente compartilhou dados com você ainda. O paciente vai em "
+                "*Meu perfil → Médicos com acesso* e informa o seu email de cadastro.")
+    else:
+        with st.spinner("Carregando pacientes..."):
+            linhas = sorted((_linha_triagem(p, diario.hoje() - timedelta(days=29)) for p in pacientes),
+                            key=lambda l: -l['_prioridade'])
+        com_achado = sum(1 for l in linhas if l['Achados'])
+        elevado = sum(1 for l in linhas if l['Resultado'] == 'Elevado')
+        sem_registro = sum(1 for l in linhas if l['Último registro'] == '—')
+        st.markdown(
+            f'<div class="tecnico">'
+            f'<div><span>Pacientes</span><b>{len(linhas)}</b></div>'
+            f'<div><span>Com achados fora da faixa</span><b>{com_achado}</b></div>'
+            f'<div><span>Última avaliação com risco elevado</span><b>{elevado}</b></div>'
+            f'<div><span>Sem registros no diário</span><b>{sem_registro}</b></div>'
+            f'</div>', unsafe_allow_html=True)
+
+        atencao = [l for l in linhas if l['_prioridade'] > 0][:5]
+        st.markdown("### Precisam de atenção")
+        if not atencao:
+            st.success("Nenhum paciente com achados ou risco elevado no período.")
+        for l in atencao:
+            with st.container(border=True, key=f"card_atencao_{l['id']}"):
+                col_info, col_botao = st.columns([4, 1], vertical_alignment="center")
+                etiquetas = []
+                if l['Resultado'] == 'Elevado':
+                    etiquetas.append(_lozenge(f"Risco {_num(l['Último risco'] * 100)}%", "danger"))
+                if l['Achados']:
+                    etiquetas.append(_lozenge(f"{l['Achados']} achado{'s' if l['Achados'] > 1 else ''}", "warning"))
+                detalhes = " · ".join(x for x in [
+                    f"{l['Idade']} anos" if l['Idade'] else "",
+                    f"IMC {_num(l['IMC'])}" if l['IMC'] else "",
+                    f"jejum médio {l['Glicemia jejum (média)']} mg/dL" if l['Glicemia jejum (média)'] else "",
+                    f"PA {l['PA média']}" if l['PA média'] != '—' else "",
+                ] if x)
+                col_info.markdown(f'<div class="card-row" style="justify-content: flex-start">'
+                                  f'<span class="card-title">{l["Paciente"]}</span>{" ".join(etiquetas)}</div>'
+                                  f'<div class="card-note">{detalhes or "sem dados no período"}</div>',
+                                  unsafe_allow_html=True)
+                col_botao.button("Abrir ficha", key=f"abrir_{l['id']}", width="stretch",
+                                 on_click=_abrir_ficha, args=(l['id'],))
+        st.button("Ver todos os pacientes", icon=":material/groups:", on_click=_ir_para, args=("Meus Pacientes",))
+
+    st.markdown("### Ferramentas de consulta")
+    col1, col2 = st.columns(2)
+    with col1, st.container(border=True, key="card_ferramenta_exames", height="stretch"):
+        st.markdown('<div class="card-title">Calculadora com exames</div>'
+                    '<div class="card-text">Risco a partir de TOTG 2h, insulina, PA diastólica, IMC e idade.</div>'
+                    '<div class="card-note">Random Forest · Pima Indians · AUC 0,839 · não salva o resultado</div>',
+                    unsafe_allow_html=True)
+        st.button("Abrir calculadora", key="ir_calc_exames", width="stretch", on_click=_ir_para, args=("Modelo Clínico",))
+    with col2, st.container(border=True, key="card_ferramenta_questionario", height="stretch"):
+        st.markdown('<div class="card-title">Questionário de triagem</div>'
+                    '<div class="card-text">Risco sem exames, a partir de 8 perguntas sobre condições e hábitos.</div>'
+                    '<div class="card-note">XGBoost · BRFSS 2015 · AUC 0,821 · não salva o resultado</div>',
+                    unsafe_allow_html=True)
+        st.button("Abrir questionário", key="ir_calc_questionario", width="stretch",
+                  on_click=_ir_para, args=("Modelo Comportamental",))
+
+
 def pagina_meus_pacientes(medico_id: str):
     st.markdown('<div class="page-header"><span class="eyebrow">Principal</span>'
                 '<span class="title">Meus pacientes</span>'
