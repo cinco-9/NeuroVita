@@ -18,15 +18,19 @@ Autor: David Reis · 2026
 - **Perfil do usuário** (idade, sexo, altura, peso, IMC, histórico familiar, alergias, medicações), usado para preencher os formulários.
 - **Modelo Clínico**: risco a partir de exames (glicemia do TOTG 2h, insulina, pressão diastólica, IMC etc.).
 - **Modelo Comportamental**: risco a partir de 8 perguntas (idade, sexo, IMC, saúde geral, pressão alta, colesterol, atividade física, fumo).
-- **Resultado** com probabilidade, medidor visual, fatores de risco identificados e recomendações.
+- **Resultado** com probabilidade, barra com o limite de decisão do modelo, fatores avaliados e recomendações.
 - **Relatório em PDF** para levar ao médico.
 - **Histórico** das avaliações de cada usuário.
 - **Diário de saúde**: alimentação (busca na tabela TACO com medidas caseiras, ou leitura do código de barras de produtos
   via [Open Food Facts](https://world.openfoodfacts.org), com cadastro manual do rótulo quando o produto não é encontrado),
   atividade física, glicemia, peso, pressão, sono, sintomas e hábitos; resumo do dia, alertas (limites da SBD/ADA) e
   gráficos de evolução.
-- **Acesso do médico**: contas do tipo médico (com CRM) veem, só para leitura, perfil, avaliações e diário dos pacientes
-  que compartilharem os dados com eles; o paciente pode revogar a qualquer momento.
+- **Acesso do médico**: contas do tipo médico (com CRM) veem, só para leitura, os pacientes que compartilharem os dados
+  com eles: uma lista de triagem ordenada por prioridade e, para cada paciente, uma ficha clínica com indicadores do
+  período, medidas fora da faixa, gráficos de glicemia, pressão e peso, e as avaliações com os detalhes técnicos do
+  modelo. O paciente pode revogar a qualquer momento.
+- **Linguagem para cada público**: o paciente vê resultados explicados em linguagem simples, com réguas coloridas e
+  valores de referência; o médico vê também probabilidade, limiar, métricas do modelo e o vetor de entrada.
 - **Privacidade (LGPD)**: termo de consentimento no cadastro, cada usuário só acessa os próprios dados (RLS no Supabase) e pode excluir a conta com todos os dados pelo próprio app.
 
 ## Modelos
@@ -136,7 +140,7 @@ app_diabetes.py                  Aplicação Streamlit (páginas, formulários, 
 auth.py                          Login, cadastro, sessão persistente, recuperação de senha, perfil
 supabase_db.py                   Acesso ao banco (uma conexão por sessão de usuário)
 pdf_generator.py                 Relatório em PDF
-gauge_component.py               Medidor de risco
+gauge_component.py               Medidor de risco (versão anterior da tela de resultado, não usado)
 analise_temporal.py              Gráficos do histórico
 modelo_*.json                    Modelos treinados e metadados (features, limiar, imputação, normalização)
 otimizar_modelo_clinico.py       Seleção e treino do modelo clínico (validação cruzada aninhada)
