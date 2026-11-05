@@ -517,6 +517,12 @@ def ir_para(pagina_destino):
     st.session_state.pagina = pagina_destino
 
 
+def abrir_compartilhamento():
+    """Atalho do card de perfil: abre o perfil já na aba de compartilhamento com o médico"""
+    st.session_state.pagina = "Meu Perfil"
+    st.session_state.aba_perfil = "Médicos com acesso"
+
+
 # Inicializar session_state
 if 'resultado_mostrado' not in st.session_state:
     st.session_state.resultado_mostrado = False
@@ -880,6 +886,9 @@ with st.sidebar:
             </div>
         """, unsafe_allow_html=True)
 
+        if not e_medico:
+            st.button("Compartilhar com meu médico", key="perfil_compartilhar", icon=":material/share:",
+                      width="stretch", type="tertiary", on_click=abrir_compartilhamento)
         st.button("Editar perfil", key="perfil_editar", icon=":material/edit:", width="stretch",
                   type="primary" if pagina == "Meu Perfil" else "secondary",
                   on_click=ir_para, args=("Meu Perfil",))
@@ -1102,7 +1111,7 @@ elif pagina == "Meu Perfil":
     aviso_perfil = st.empty()
 
     abas = ["Dados pessoais", "Saúde"] + ([] if e_medico else ["Médicos com acesso"]) + ["Privacidade"]
-    tabs = dict(zip(abas, st.tabs(abas)))
+    tabs = dict(zip(abas, st.tabs(abas, default=st.session_state.pop('aba_perfil', None))))
 
     with tabs["Dados pessoais"]:
         nome = st.text_input("Nome completo", value=st.session_state.perfil_nome)

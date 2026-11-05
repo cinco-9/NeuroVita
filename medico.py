@@ -273,13 +273,19 @@ def _triagem(pacientes: List[Dict], inicio, dias: int) -> Optional[str]:
 
     st.caption("Ordenada por prioridade: achados graves, risco elevado e demais achados. "
                "Clique numa linha para abrir a ficha do paciente.")
+    # Valores ausentes aparecem como "—" (o st.dataframe escreveria "None")
+    exibicao = tabela.drop(columns=['id', '_prioridade']).assign(**{
+        'Idade': tabela['Idade'].map(lambda v: f"{v:.0f}" if pd.notna(v) and v else "—"),
+        'IMC': tabela['IMC'].map(lambda v: _num(v) if pd.notna(v) and v else "—"),
+        'Glicemia jejum (média)': tabela['Glicemia jejum (média)'].map(
+            lambda v: f"{v:.0f} mg/dL" if pd.notna(v) and v else "—"),
+        'Último risco': pd.to_numeric(tabela['Último risco'], errors='coerce'),
+    })
     evento = st.dataframe(
-        tabela.drop(columns=['id', '_prioridade']), hide_index=True, width="stretch",
+        exibicao, hide_index=True, width="stretch",
         on_select="rerun", selection_mode="single-row", key="triagem_pacientes",
         column_config={
             'Último risco': st.column_config.ProgressColumn('Último risco', min_value=0.0, max_value=1.0, format="%.3f"),
-            'IMC': st.column_config.NumberColumn('IMC', format="%.1f"),
-            'Glicemia jejum (média)': st.column_config.NumberColumn('Glicemia jejum (média)', format="%d mg/dL"),
             'Achados': st.column_config.NumberColumn('Achados', help=f"Medidas fora da faixa nos últimos {dias} dias"),
         })
     selecionadas = evento.selection.rows if evento and evento.selection else []
