@@ -1,0 +1,28 @@
+# O Supabase grátis pausa o projeto depois de cerca de 7 dias sem uso. Este workflow faz uma consulta
+# simples ao banco a cada 3 dias para ele continuar ativo. Com a chave anon e o RLS, a resposta é uma
+# lista vazia: nenhum dado de usuário é lido.
+# Precisa dos secrets SUPABASE_URL e SUPABASE_KEY (Settings > Secrets and variables > Actions).
+name: Manter Supabase ativo
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *"   # 12:00 UTC (9:00 em Brasília), a cada 3 dias
+  workflow_dispatch:          # permite rodar na mão pela aba Actions
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar o banco
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "Faltam os secrets SUPABASE_URL e SUPABASE_KEY"; exit 1
+          fi
+          status=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/predicoes?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
+          echo "Resposta do Supabase: $status"
+          [ "$status" = "200" ]
